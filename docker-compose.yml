@@ -1,18 +1,17 @@
-version: '3.8'
+version: "3.8"
 
 services:
   backend:
-  build:
-    context: ./Backend
-    dockerfile: Dockerfile
-
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
     volumes:
-      - ./data:/app/data:ro  # Veri klasörü read-only mount
+      - ./Backend/Data:/app/Data:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s
@@ -20,6 +19,8 @@ services:
       retries: 3
 
   frontend:
+    build:
+      context: ./frontend
     image: node:20-alpine
     working_dir: /app
     volumes:
@@ -27,7 +28,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - VITE_API_BASE=http://localhost:8000/api/v1
+      VITE_API_BASE: http://localhost:8000/api/v1
     command: sh -c "npm install && npm run dev -- --host"
     depends_on:
       - backend
