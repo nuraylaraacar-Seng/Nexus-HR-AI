@@ -5,7 +5,7 @@ import requests
 class HRConsultantAI:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
-        self.model = "models/gemini-1.5-pro"
+        self.model = "models/gemini-1.5-flash"
 
         if not self.api_key:
             logging.error("GEMINI_API_KEY tanımlı değil!")
