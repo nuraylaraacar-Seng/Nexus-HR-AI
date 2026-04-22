@@ -160,7 +160,6 @@ class HRDataModel(BaseModel):
     average_engagement: float
 
 @app.post("/executive-summary")
-@limiter.limit("5/minute")
 async def get_ai_summary(data: HRDataModel):
     ai_report = ai_engine.generate_executive_summary(data.dict())
     if "error" in ai_report:
