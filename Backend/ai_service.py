@@ -41,9 +41,18 @@ class HRConsultantAI:
             response = requests.post(self.url, headers=headers, json=body)
             data = response.json()
 
+            # Eğer candidates yoksa hata döndür
+            if "candidates" not in data:
+                return {
+                    "error": "AI yanıt üretemedi",
+                    "detail": data
+                }
+
+            ai_text = data["candidates"][0]["content"]["parts"][0]["text"]
+
             return {
                 "report_title": "AI Stratejik Yönetici Özeti",
-                "ai_insight": data["candidates"][0]["content"]["parts"][0]["text"],
+                "ai_insight": ai_text,
                 "status": "Success"
             }
 
