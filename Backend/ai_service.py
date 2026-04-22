@@ -13,7 +13,8 @@ class HRConsultantAI:
             logging.error("GEMINI_API_KEY tanımlı değil!")
             return
 
-        self.url = f"https://generativelanguage.googleapis.com/v1beta/{self.model}:generateContent"
+        self.url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+
 
     def generate_executive_summary(self, hr_data: dict):
         headers = {
