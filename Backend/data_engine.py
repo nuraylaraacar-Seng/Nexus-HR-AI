@@ -3,7 +3,8 @@ import numpy as np
 from pathlib import Path
 from functools import lru_cache
 import logging
-from config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
+from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
+
 
 
 #log1p=log(1+x)
