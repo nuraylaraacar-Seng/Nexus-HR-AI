@@ -159,7 +159,7 @@ class HRDataModel(BaseModel):
     flight_risk_count: int
     average_engagement: float
 
-@app.post("/executive-summary")
+@app.post("/api/v1/ai/executive-summary")
 async def get_ai_summary(data: HRDataModel):
     ai_report = ai_engine.generate_executive_summary(data.dict())
     if "error" in ai_report:
