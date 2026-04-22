@@ -25,7 +25,7 @@ class HRDataEngine:
         - Sadece Data klasörü altındaki dosyalara izin verilir
         """
         # Backend klasörünün üstü
-        BASE_DIR = Path(__file__).parent.parent 
+        BASE_DIR = Path(__file__).parent
         allowed_base = (BASE_DIR / "Data").resolve()
 
         # Kullanıcının verdiği path'i mutlak hale getir
