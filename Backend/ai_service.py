@@ -17,7 +17,7 @@ class HRConsultantAI:
             genai.configure(api_key=self.api_key)
 
             # Modeli başlat
-            self.model = genai.GenerativeModel("gemini-1.5-pro-latest")
+            self.model = genai.GenerativeModel("gemini-1.5-pro")
 
 
             logging.info("AI Motoru başarıyla başlatıldı.")
