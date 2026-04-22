@@ -17,7 +17,8 @@ class HRConsultantAI:
             genai.configure(api_key=self.api_key)
 
             # Modeli başlat
-            self.model = genai.GenerativeModel("gemini-1.5-flash")
+            self.model = genai.GenerativeModel("gemini-2.0-pro-exp")
+
 
             logging.info("AI Motoru başarıyla başlatıldı.")
         except Exception as e:
