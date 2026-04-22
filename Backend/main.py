@@ -15,9 +15,10 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, field_validator
-from data_engine import HRDataEngine
-from ai_service import HRConsultantAI
-from config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
+
+from Backend.data_engine import HRDataEngine
+from Backend.ai_service import HRConsultantAI
+from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
 from dotenv import load_dotenv
 #Çevresel değişeknleri/variable ları (.env) sisteme yükler
 #API anahtarları ve dosya yolları buradan okunur.
