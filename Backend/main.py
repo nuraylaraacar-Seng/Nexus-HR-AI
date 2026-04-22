@@ -152,7 +152,7 @@ async def get_flight_risk(request: Request):
     return {"status": "success", "data": engine.predict_flight_risk_advanced()}
 
 
-@app.get("/api/v1/ai/executive-summary")
+@app.post("/executive-summary")
 #Yapay Zeka daha maliyetli bir işlem olduğu için
 #AI endpoint → daha kısıtlı
 @limiter.limit("5/minute")  
