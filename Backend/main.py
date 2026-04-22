@@ -152,24 +152,21 @@ async def get_flight_risk(request: Request):
     return {"status": "success", "data": engine.predict_flight_risk_advanced()}
 
 
-@app.post("/executive-summary")
-#Yapay Zeka daha maliyetli bir işlem olduğu için
-#AI endpoint → daha kısıtlı
-@limiter.limit("5/minute")  
-async def get_ai_summary(request: Request):
-    """Yapay Zeka (Gemini) Stratejik Yönetici Özeti"""
-    #önce veri motorundan risk özeti alınır
-    risk_data = engine.get_risk_summary()
-    if not risk_data:
-        raise HTTPException(status_code=500, detail="Risk verileri hesaplanamadı.")
-    
-    #Alınan bu veriler context olarak AI motoruna gönderilir
-    ai_report = ai_engine.generate_executive_summary(risk_data)
-    if "error" in ai_report:
-        #AI servisine ulaşılmazsa 503 döner
-        raise HTTPException(status_code=503, detail=ai_report["error"])
 
+class HRDataModel(BaseModel):
+    total_employees: int
+    average_salary: float
+    flight_risk_count: int
+    average_engagement: float
+
+@app.post("/executive-summary")
+@limiter.limit("5/minute")
+async def get_ai_summary(data: HRDataModel):
+    ai_report = ai_engine.generate_executive_summary(data.dict())
+    if "error" in ai_report:
+        raise HTTPException(status_code=503, detail=ai_report["error"])
     return {"status": "success", "data": ai_report}
+
 
 """API'nin ve bağlı alt sistemlerin anlık sağlık durumunu (Health Check) raporlar.
            Kubernetes, Docker ve bulut yük dengeleyicileri (Load Balancers) tarafından 
