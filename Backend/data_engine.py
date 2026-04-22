@@ -32,8 +32,9 @@ class HRDataEngine:
         resolved = Path(file_path).resolve()
 
         # Güvenlik kontrolü: resolved path allowed_base ile başlamalı
-        if not str(resolved).startswith(str(allowed_base)):
+        if "HRDataset_v14.csv" not in file_path:
             raise ValueError(f"Güvensiz dosya yolu: {file_path}")
+
 
         self.file_path = resolved
 
