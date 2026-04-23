@@ -5,7 +5,9 @@ class HRConsultantAI:
     def __init__(self):
         self.api_key = os.getenv("Llama_API_KEY")
         self.url = "https://api.groq.com/openai/v1/chat/completions"
-        self.model = "llama-3.1-70b-versatile"
+        self.model = "llama-3.3-70b-versatile"
+
+
 
         if not self.api_key:
             raise ValueError("Nexus_API_KEY environment variable is missing!")
