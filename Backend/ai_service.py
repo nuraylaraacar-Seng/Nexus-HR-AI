@@ -8,7 +8,7 @@ class HRConsultantAI:
         self.model = "llama-3.1-70b-versatile"
 
         if not self.api_key:
-            raise ValueError("GROQ_API_KEY environment variable is missing!")
+            raise ValueError("Nexus_API_KEY environment variable is missing!")
 
     def generate_executive_summary(self, risk_data: dict):
         prompt = f"""
