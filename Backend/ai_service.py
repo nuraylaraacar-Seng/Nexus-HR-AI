@@ -1,52 +1,60 @@
 import os
-import logging
 import requests
 
 class HRConsultantAI:
     def __init__(self):
-        self.api_key = os.getenv("GOOGLE_API_KEY")
-        self.client = True
-        
+        self.api_key = os.getenv("Llama_API_KEY")
+        self.url = "https://api.groq.com/openai/v1/chat/completions"
+        self.model = "llama-3.1-70b-versatile"
+
         if not self.api_key:
-            logging.error("GOOGLE_API_KEY tanımlı değil!")
-            self.client = None
-            return
-            
-        self.url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent"
+            raise ValueError("GROQ_API_KEY environment variable is missing!")
 
-
-    def generate_executive_summary(self, hr_data: dict):
-        headers = {
-            "Content-Type": "application/json",
-            "x-goog-api-key": self.api_key
-        }
+    def generate_executive_summary(self, risk_data: dict):
         prompt = f"""
-        Sen kıdemli bir İnsan Kaynakları Stratejistisin.
-        - Toplam Çalışan: {hr_data.get('total_employees')}
-        - Ortalama Maaş: ${hr_data.get('average_salary')}
-        - İstifa Riski Yüksek: {hr_data.get('flight_risk_count')}
-        - Bağlılık Skoru: {hr_data.get('average_engagement')}/5
-        Yönetim Kuruluna sunulmak üzere:
-        1. Mevcut durumun 2 cümlelik özeti
-        2. İstifa riskini azaltmak için 3 aksiyon maddesi
+        You are an HR analytics consultant. Based on the following HR metrics,
+        generate a concise and professional executive summary in Turkish.
+        Use a corporate tone and include 3–5 actionable recommendations.
+
+        HR Metrics:
+        - Total employees: {risk_data.get('total_employees')}
+        - Average salary: {risk_data.get('avg_salary')}
+        - High-risk employees: {risk_data.get('high_risk_count')}
+        - Average engagement score: {risk_data.get('avg_engagement')}
+
+        Requirements:
+        - Output must be in Turkish.
+        - Keep the summary structured and business-oriented.
+        - Avoid emotional or informal language.
         """
-        body = {
-            "contents": [{"parts": [{"text": prompt}]}]
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": "You are a senior HR analytics consultant."},
+                {"role": "user", "content": prompt}
+            ],
+            "temperature": 0.4
         }
-        try:
-            response = requests.post(self.url, headers=headers, json=body)
-            data = response.json()
-            
-            if "candidates" not in data:
-                logging.error(f"AI yanıt hatası: {data}")
-                return {"error": f"AI yanıt üretemedi: {data}"}
-                
-            ai_text = data["candidates"][0]["content"]["parts"][0]["text"]
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(self.url, json=payload, headers=headers, timeout=60)
+
+        if response.status_code != 200:
             return {
-                "report_title": "AI Stratejik Yönetici Özeti",
-                "ai_insight": ai_text,
-                "status": "Success"
+                "status": "error",
+                "detail": response.text
             }
-        except Exception as e:
-            logging.error(f"AI Yanıt Üretemedi: {str(e)}")
-            return {"error": str(e)}
+
+        data = response.json()
+        ai_text = data["choices"][0]["message"]["content"]
+
+        return {
+            "status": "success",
+            "report_title": "AI Stratejik Yönetici Özeti",
+            "ai_insight": ai_text
+        }
