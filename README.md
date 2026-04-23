@@ -13,8 +13,6 @@
 🔗 **Live Demo:** [Nexus HR Dashboard'u İncele] https://nexus-hr-ai.vercel.app
                                                        Not: Backend ücretsiz Railway sunucusunda çalıştığı için ilk isteklerde uyanması 30-40 saniye sürebilir.
 
-## 📌 Project Context & Overview
-...
 
 ## 📌 Project Context & Overview
 Nexus HR is an end-to-end Minimum Viable Product (MVP) designed to bridge the gap between raw HR datasets and actionable decision-making. 
