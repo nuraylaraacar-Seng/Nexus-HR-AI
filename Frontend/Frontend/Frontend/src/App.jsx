@@ -181,7 +181,14 @@ function App() {
 }
 
 const styles = {
-  page:       { padding: '32px', fontFamily: 'system-ui, sans-serif', backgroundColor: '#f0f4f8', minHeight: '100vh' },
+  page: {
+  width: '100%',
+  maxWidth: '100%',
+  padding: '32px',
+  fontFamily: 'system-ui, sans-serif',
+  backgroundColor: '#f0f4f8',
+  minHeight: '100vh'
+  },
   header:     { marginBottom: '28px' },
   title:      { fontSize: '24px', fontWeight: '700', color: '#2c3e50', margin: 0 },
   subtitle:   { color: '#7f8c8d', margin: '4px 0 0' },
