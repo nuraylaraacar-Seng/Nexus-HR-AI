@@ -67,7 +67,7 @@ function App() {
       const res = await axios.get(`${API_BASE}/ai/executive-summary`);
       setAiReport(res.data.data);
     } catch (e) {
-      setError("AI raporu alınamadı. Backend'in çalıştığından ve GEMINI_API_KEY'in tanımlı olduğundan emin ol.");
+      setError("AI raporu alınamadı. Backend'in çalıştığından ve Nexus_API_KEY'in tanımlı olduğundan emin ol.");
     }
     setLoading(false);
   };
