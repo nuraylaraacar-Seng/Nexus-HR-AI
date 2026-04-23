@@ -12,7 +12,8 @@ class HRConsultantAI:
             self.client = None
             return
             
-        self.url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+        self.url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent"
+
 
     def generate_executive_summary(self, hr_data: dict):
         headers = {
