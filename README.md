@@ -11,7 +11,7 @@
 
 
 🔗 **Live Demo:** [Nexus HR Dashboard'u İncele] https://nexus-hr-ai.vercel.app
-*(Not: Backend ücretsiz Railway sunucusunda çalıştığı için ilk isteklerde uyanması 30-40 saniye sürebilir.)*
+                                                       Not: Backend ücretsiz Railway sunucusunda çalıştığı için ilk isteklerde uyanması 30-40 saniye sürebilir.
 
 ## 📌 Project Context & Overview
 ...
