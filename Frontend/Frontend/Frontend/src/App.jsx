@@ -79,38 +79,52 @@ function App() {
         <div>
           <h1 style={styles.title}>🎯 Nexus HR: Enterprise AI Dashboard</h1>
           <p style={styles.subtitle}>Kurumsal Veri Analiz ve Karar Destek Platformu</p>
+          <div style={{
+        width: '120px',
+        height: '4px',
+        margin: '12px auto 0',
+        borderRadius: '4px',
+        background: 'linear-gradient(90deg, #9b59b6, #3498db)'
+        }} />
         </div>
       </header>
 
-      {/* KPI KARTLARI */}
-      <div style={styles.cardRow}>
-        <div style={styles.card}>
-          <Users size={28} color="#3498db" />
-          <h3 style={styles.cardLabel}>İstifa Riski</h3>
-          <p style={styles.cardValue}>{riskList.length} Çalışan</p>
-        </div>
-        <div style={styles.card}>
-          <DollarSign size={28} color="#2ecc71" />
-          <h3 style={styles.cardLabel}>Ort. Maaş</h3>
-          <p style={styles.cardValue}>
-            {kpiData ? `$${kpiData.value.toLocaleString()}` : '...'}
-          </p>
-        </div>
-        <div style={styles.card}>
-          <Activity size={28} color="#e74c3c" />
-          <h3 style={styles.cardLabel}>Departman Sayısı</h3>
-          <p style={styles.cardValue}>{payGap.length}</p>
-        </div>
-        <div style={styles.card}>
-          <AlertTriangle size={28} color="#f39c12" />
-          <h3 style={styles.cardLabel}>Risk Oranı</h3>
-          <p style={styles.cardValue}>
-            {riskList.length && kpiData
-              ? `%${((riskList.length / 12) * 100).toFixed(0)}`
-              : '...'}
-          </p>
-        </div>
-      </div>
+       {/* KPI KARTLARI */}
+{/* KPI KARTLARI */}
+<div style={styles.cardRow}>
+
+  <div className="card" style={styles.card}>
+    <Users size={28} color="#3498db" />
+    <h3 style={styles.cardLabel}>İstifa Riski</h3>
+    <p style={styles.cardValue}>{riskList.length} Çalışan</p>
+  </div>
+
+  <div className="card" style={styles.card}>
+    <DollarSign size={28} color="#2ecc71" />
+    <h3 style={styles.cardLabel}>Ort. Maaş</h3>
+    <p style={styles.cardValue}>
+      {kpiData ? `$${kpiData.value.toLocaleString()}` : '...'}
+    </p>
+  </div>
+
+  <div className="card" style={styles.card}>
+    <Activity size={28} color="#e74c3c" />
+    <h3 style={styles.cardLabel}>Departman Sayısı</h3>
+    <p style={styles.cardValue}>{payGap.length}</p>
+  </div>
+
+  <div className="card" style={styles.card}>
+    <AlertTriangle size={28} color="#f39c12" />
+    <h3 style={styles.cardLabel}>Risk Oranı</h3>
+    <p style={styles.cardValue}>
+      {riskList.length && kpiData
+        ? `%${((riskList.length / 12) * 100).toFixed(0)}`
+        : '...'}
+    </p>
+  </div>
+
+</div>
+
 
       <div style={styles.twoCol}>
         {/* CİNSİYET MAAŞ UÇURUMU GRAFİĞİ */}
@@ -159,9 +173,14 @@ function App() {
           <h2 style={{ margin: 0, color: '#2c3e50' }}>Yapay Zeka Strateji Merkezi</h2>
         </div>
 
-        <button onClick={fetchAIReport} style={styles.button} disabled={loading}>
-          {loading ? '⏳ AI Analiz Ediyor...' : '🚀 AI Stratejik Özetini Üret'}
-        </button>
+        <button 
+  className="shake"
+  onClick={fetchAIReport} 
+  style={styles.button} 
+  disabled={loading}
+>
+  {loading ? '⏳ AI Analiz Ediyor...' : '🚀 AI Stratejik Özetini Üret'}
+</button>
 
         {error && (
           <div style={styles.errorBox}>{error}</div>
@@ -184,17 +203,44 @@ const styles = {
   page: {
   width: '100%',
   maxWidth: '100%',
-  padding: '32px',
+  padding: '0',
   fontFamily: 'system-ui, sans-serif',
   backgroundColor: '#f0f4f8',
-  minHeight: '100vh'
+  minHeight: '100vh',
+  textAlign: 'left',
 },
 
-  header:     { marginBottom: '28px' },
-  title:      { fontSize: '24px', fontWeight: '700', color: '#2c3e50', margin: 0 },
-  subtitle:   { color: '#7f8c8d', margin: '4px 0 0' },
-  cardRow:    { display: 'flex', gap: '16px', marginBottom: '24px', flexWrap: 'wrap' },
-  card:       { flex: 1, minWidth: '160px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', textAlign: 'center' },
+  header: {
+  marginBottom: '40px',
+  textAlign: 'center'
+  },
+
+  title:{
+  fontSize: '32px',
+  fontWeight: '10000',
+  color: '#2c3e50',
+  margin: 0 },
+
+  subtitle:   {
+  color: '#7f8c8d',
+  margin: '4px 0 0',
+  fontSize:'15px'
+},
+cardRow: {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+  gap: '16px',
+  marginBottom: '24px'
+},
+
+  card:{
+    textAlign: 'left',
+    minWidth: '160px',
+    backgroundColor: 'white',
+    padding: '20px',
+    borderRadius: '12px',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.07)',
+    },
   cardLabel:  { fontSize: '13px', color: '#7f8c8d', margin: '8px 0 4px' },
   cardValue:  { fontSize: '22px', fontWeight: '700', color: '#2c3e50', margin: 0 },
   twoCol: {
@@ -203,7 +249,6 @@ const styles = {
   gap: '20px',
   marginBottom: '24px'
 },
-
   panel: {
   flex: 1,
   backgroundColor: 'white',
@@ -211,6 +256,18 @@ const styles = {
   borderRadius: '12px',
   boxShadow: '0 2px 8px rgba(0,0,0,0.07)'
   },
+  button: {
+  background: 'linear-gradient(135deg, #9b59b6, #8e44ad)',
+  color: 'white',
+  border: 'none',
+  padding: '12px 28px',
+  borderRadius: '8px',
+  fontSize: '15px',
+  cursor: 'pointer',
+  fontWeight: '600',
+  boxShadow: '0 4px 12px rgba(155,89,182,0.3)',
+  transition: '0.25s ease'
+},
   panelTitle: { fontSize: '16px', fontWeight: '600', color: '#2c3e50', marginTop: 0 },
   hint:       { fontSize: '12px', color: '#aaa', marginTop: '8px' },
   riskList:   { display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' },
