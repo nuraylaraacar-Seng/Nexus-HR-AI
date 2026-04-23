@@ -188,7 +188,8 @@ const styles = {
   fontFamily: 'system-ui, sans-serif',
   backgroundColor: '#f0f4f8',
   minHeight: '100vh'
-  },
+},
+
   header:     { marginBottom: '28px' },
   title:      { fontSize: '24px', fontWeight: '700', color: '#2c3e50', margin: 0 },
   subtitle:   { color: '#7f8c8d', margin: '4px 0 0' },
@@ -196,8 +197,20 @@ const styles = {
   card:       { flex: 1, minWidth: '160px', backgroundColor: 'white', padding: '20px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', textAlign: 'center' },
   cardLabel:  { fontSize: '13px', color: '#7f8c8d', margin: '8px 0 4px' },
   cardValue:  { fontSize: '22px', fontWeight: '700', color: '#2c3e50', margin: 0 },
-  twoCol:     { display: 'flex', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' },
-  panel:      { flex: 1, minWidth: '300px', backgroundColor: 'white', padding: '24px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' },
+  twoCol: {
+  display: 'grid',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+  gap: '20px',
+  marginBottom: '24px'
+},
+
+  panel: {
+  flex: 1,
+  backgroundColor: 'white',
+  padding: '24px',
+  borderRadius: '12px',
+  boxShadow: '0 2px 8px rgba(0,0,0,0.07)'
+  },
   panelTitle: { fontSize: '16px', fontWeight: '600', color: '#2c3e50', marginTop: 0 },
   hint:       { fontSize: '12px', color: '#aaa', marginTop: '8px' },
   riskList:   { display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '240px', overflowY: 'auto' },
