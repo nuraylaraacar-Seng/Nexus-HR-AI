@@ -13,22 +13,34 @@ class HRConsultantAI:
             raise ValueError("Nexus_API_KEY environment variable is missing!")
 
     def generate_executive_summary(self, risk_data: dict):
-        prompt = f"""
-        You are an HR analytics consultant. Based on the following HR metrics,
-        generate a concise and professional executive summary in Turkish.
-        Use a corporate tone and include 3–5 actionable recommendations.
+        prompt = prompt = f"""
+        
+        You are a senior HR analytics strategist. Using the HR metrics provided, generate a highly structured, executive‑level summary in **Turkish**.
+        Your output MUST follow this exact structure:
 
-        HR Metrics:
-        - Total employees: {risk_data.get('total_employees')}
-        - Average salary: {risk_data.get('avg_salary')}
-        - High-risk employees: {risk_data.get('high_risk_count')}
-        - Average engagement score: {risk_data.get('avg_engagement')}
+        1. **Genel Durum Özeti (2–3 sentences)**
+         - Provide a concise, high‑level overview of the organization’s current HR landscape.
 
-        Requirements:
-        - Output must be in Turkish.
-        - Keep the summary structured and business-oriented.
-        - Avoid emotional or informal language.
-        """
+        2. **Kritik Bulgular**
+        - Toplam çalışan: {risk_data.get('total_employees')}
+        - Ortalama maaş: {risk_data.get('avg_salary') or "Veri mevcut değil"}
+        - Yüksek riskli çalışan sayısı: {risk_data.get('high_risk_count') or "Veri mevcut değil"}
+        - Ortalama bağlılık skoru: {risk_data.get('avg_engagement') or "Veri mevcut değil"}
+
+       3. **Stratejik Değerlendirme**
+       - Provide analytical insights explaining what these metrics imply.
+       - If any metric is missing, explicitly state: “Eksik veri nedeniyle analiz sınırlıdır.”
+
+      4. **Önerilen Aksiyonlar (3–5 items)**
+      - Provide short, actionable, C‑level recommendations.
+
+      STRICT RULES:
+     - Output MUST be in Turkish.
+     - Do NOT fabricate or assume any numbers.
+     - Maintain a corporate, analytical, concise tone.
+     - Follow the structure exactly as written.
+"""
+
 
         payload = {
             "model": self.model,
