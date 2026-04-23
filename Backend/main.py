@@ -153,20 +153,20 @@ async def get_flight_risk(request: Request):
 
 
 
-class HRDataModel(BaseModel):
-    total_employees: int
-    average_salary: float
-    flight_risk_count: int
-    average_engagement: float
-
 @app.get("/api/v1/ai/executive-summary")
-async def get_ai_summary(data: HRDataModel):
-    ai_report = ai_engine.generate_executive_summary(data.dict())
+@limiter.limit("5/minute")
+async def get_ai_summary(request: Request):
+    """Yapay Zeka (Gemini) Stratejik Yönetici Özeti"""
+    risk_data = engine.get_risk_summary()
+    if not risk_data:
+        raise HTTPException(status_code=500, detail="Risk verileri hesaplanamadı.")
+    
+    ai_report = ai_engine.generate_executive_summary(risk_data)
     if "error" in ai_report:
         raise HTTPException(status_code=503, detail=ai_report["error"])
+
     return {"status": "success", "data": ai_report}
-
-
+    
 """API'nin ve bağlı alt sistemlerin anlık sağlık durumunu (Health Check) raporlar.
            Kubernetes, Docker ve bulut yük dengeleyicileri (Load Balancers) tarafından 
            uygulamanın trafik kabul etmeye hazır olup olmadığını (Liveness ve Readiness)
