@@ -8,7 +8,6 @@ Pydantic ile verileri doğrular ve ilgili iş motorlarına (Data Engine, AI Serv
 import os
 import logging
 from pathlib import Path
-from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -156,7 +155,7 @@ async def get_flight_risk(request: Request):
 @app.get("/api/v1/ai/executive-summary")
 @limiter.limit("5/minute")
 async def get_ai_summary(request: Request):
-    """Yapay Zeka (Gemini) Stratejik Yönetici Özeti"""
+    """Yapay Zeka (Groq/Llama) Stratejik Yönetici Özeti"""
     risk_data = engine.get_risk_summary()
     if not risk_data:
         raise HTTPException(status_code=500, detail="Risk verileri hesaplanamadı.")
