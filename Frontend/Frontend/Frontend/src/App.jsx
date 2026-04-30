@@ -25,18 +25,30 @@ function App() {
   }, []);
 
 
-  const handleFileUpload = async (e) => {
+  
+const handleFileUpload = async (e) => {
   const file = e.target.files[0];
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch("https://nexus-hr-ai-production.up.railway.app/api/v1/upload-dataset", {
+  const res = await fetch(`${API_BASE}/upload-dataset`, {
     method: "POST",
     body: formData
   });
 
   const data = await res.json();
+
+  if (data.status === "error") {
+    alert(data.message);
+    return;
+  }
+
   setSummary(data.summary);
+
+  // Yeni dataset yüklendi → dashboard'u güncelle
+  fetchKPI();
+  fetchFlightRisk();
+  fetchPayGap();
 };
 
 
@@ -90,7 +102,15 @@ function App() {
     setLoading(false);
   };
 
-  return (
+  return ( 
+    <div style={{ marginBottom: "20px" }}>
+  <input
+    type="file"
+    accept=".csv"
+    onChange={handleFileUpload}
+  />
+</div>
+
     <div style={styles.page}>
       {/* HEADER */}
       <header style={styles.header}>
@@ -107,11 +127,7 @@ function App() {
         </div>
       </header>
 
-      <input
-  type="file"
-  accept=".csv"
-  onChange={handleFileUpload}
-/>
+      
 
 
        {/* KPI KARTLARI */}
