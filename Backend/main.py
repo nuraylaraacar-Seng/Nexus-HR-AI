@@ -181,9 +181,3 @@ async def health_check():
 @app.get("/test")
 async def test():
     return {"test": "ok"}                                                                           
-@app.post("/api/v1/employees")
-@limiter.limit("10/minute")
-async def add_employee(employee: EmployeeCreateSchema, db: Session = Depends(get_db)):
-    """Sisteme yeni bir çalışan ekler - Artık sadece izlemiyoruz, yönetiyoruz!"""
-    new_emp = create_employee_in_db(db, employee)
-    return {"status": "success", "data": new_emp}
