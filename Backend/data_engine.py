@@ -17,32 +17,19 @@ from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
 
 class HRDataEngine:
     def __init__(self, file_path: str):
-        """
-        Veri motorunu başlatır ve güvenlik kontrolü yapar.
-
-        Path Traversal saldırılarını engellemek için:
-        - Kullanıcının verdiği path resolve edilir (mutlak hale getirilir)
-        - Sadece Data klasörü altındaki dosyalara izin verilir
-        """
-        # Backend klasörünün üstü
         BASE_DIR = Path(__file__).parent
         allowed_base = (BASE_DIR / "Data").resolve()
 
-        # Kullanıcının verdiği path'i mutlak hale getir
         resolved = Path(file_path).resolve()
 
         # Güvenlik kontrolü: resolved path allowed_base ile başlamalı
-      
-
-    if not str(resolved).startswith(str(allowed_base)):
-        raise ValueError("Güvensiz dosya yolu!")
-
-
+        if not str(resolved).startswith(str(allowed_base)):
+            raise ValueError("Güvensiz dosya yolu!")
 
         self.file_path = resolved
-
         self.df = pd.DataFrame()
         self.load_and_clean_data()
+
 
     def load_and_clean_data(self):
         """
