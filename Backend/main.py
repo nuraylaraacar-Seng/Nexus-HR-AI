@@ -122,49 +122,36 @@ class KPIRequest(BaseModel):
 
 @app.post("/api/v1/upload-dataset")
 async def upload_dataset(file: UploadFile = File(...)):
-    from pandas.errors import EmptyDataError
     global engine
 
     try:
-        # Dosyayı önce RAM'de oku (validasyon için)
+        # Dosyayı RAM'de oku
         contents = await file.read()
 
-        # Boş dosya kontrolü
         if not contents:
-            return {
-                "status": "error",
-                "message": "Boş dataset yüklenemez."
-            }
+            return {"status": "error", "message": "Boş dosya yüklenemez."}
 
-        # DataFrame olarak kontrol et (kolonlar vs.)
+        # DataFrame olarak doğrula
         from io import BytesIO
         df = pd.read_csv(BytesIO(contents))
-
-        if df.empty:
-            return {
-                "status": "error",
-                "message": "Boş dataset yüklenemez."
-            }
 
         required_cols = ["Salary", "Department", "Termd", "EngagementSurvey"]
         missing = [c for c in required_cols if c not in df.columns]
 
         if missing:
-            return {
-                "status": "error",
-                "message": f"Eksik kolonlar: {missing}"
-            }
+            return {"status": "error", "message": f"Eksik kolonlar: {missing}"}
 
-        # ✅ Asıl kritik kısım: dosyayı sabit path'e yaz
-        save_path = Path(DATA_PATH)  # DATA_PATH zaten yukarıda tanımlı
+        # 📌 1) Dosyayı diske yaz
+        save_path = Path(DATA_PATH)
         save_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(save_path, "wb") as f:
             f.write(contents)
 
-        # ✅ Engine'i YENİDEN, dosya yoluyla başlat
+        # 📌 2) Engine'i yeni dataset ile yeniden başlat
         engine = HRDataEngine(str(save_path))
 
+        # 📌 3) Yeni dataset'in özetini döndür
         summary = engine.get_risk_summary()
 
         return {
@@ -173,17 +160,9 @@ async def upload_dataset(file: UploadFile = File(...)):
             "summary": summary
         }
 
-    except EmptyDataError:
-        return {
-            "status": "error",
-            "message": "CSV dosyası boş görünüyor."
-        }
-
     except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+        return {"status": "error", "message": str(e)}
+
 
 
 
