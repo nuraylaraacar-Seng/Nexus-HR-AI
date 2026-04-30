@@ -1,35 +1,31 @@
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from functools import lru_cache
 import logging
 from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
 
 
-
-#log1p=log(1+x)
-
-# GÜVENLİK: SQL Injection / parametre manipülasyonunu önlemek için
-# izin verilen metrik ve hesaplama tipleri sabit listede tanımlanır.
-# Bu listelerin dışındaki hiçbir değer işleme alınmaz.
-
-
-
 class HRDataEngine:
     def __init__(self, file_path: str):
-        BASE_DIR = Path(__file__).parent
-        allowed_base = (BASE_DIR / "Data").resolve()
+        BASE_DIR = Path(__file__).parent.parent  # Projenin kök dizini (Backend'in bir üstü)
+
+        # Güvenli dizinler: hem varsayılan Data/ hem de session'a özel Data/sessions/
+        allowed_bases = [
+            (BASE_DIR / "Data").resolve(),
+            (BASE_DIR / "Data" / "sessions").resolve(),
+        ]
 
         resolved = Path(file_path).resolve()
 
-        # Güvenlik kontrolü: resolved path allowed_base ile başlamalı
-        if not str(resolved).startswith(str(allowed_base)):
-            raise ValueError("Güvensiz dosya yolu!")
+        # Güvenlik kontrolü: dosya izin verilen dizinlerden birinde mi?
+        if not any(str(resolved).startswith(str(base)) for base in allowed_bases):
+            raise ValueError(
+                f"Güvensiz dosya yolu! İzin verilen dizinler: {[str(b) for b in allowed_bases]}"
+            )
 
         self.file_path = resolved
         self.df = pd.DataFrame()
         self.load_and_clean_data()
-
 
     def load_and_clean_data(self):
         """
@@ -37,26 +33,17 @@ class HRDataEngine:
         1. CSV'yi oku (Extract)
         2. Eksik kritik verileri temizle (Transform)
         3. Veriyi analiz için hazır hale getir (Load)
- 
-        Veri kalitesi (Data Quality) güvencesi:
-        - Salary, PerformanceScore, EngagementSurvey eksik olan satırlar çıkarılır.
-        - Tarih sütunu standart formata dönüştürülür.
-        - Cinsiyet sütunundaki boşluklar temizlenir ('M ' → 'M').
-        - Log dönüşümü ile maaş dağılımı normalize edilir.
         """
         try:
-            # Kritik sütunlarda eksik değer olan satırlar veri bütünlüğü için çıkarılır.
             raw_data = pd.read_csv(self.file_path)
             self.df = raw_data.dropna(subset=['Salary', 'PerformanceScore', 'EngagementSurvey']).copy()
-            # Tarih sütunu datetime formatına çevrilir; hatalı değerler NaT olur.
             self.df['DateofHire'] = pd.to_datetime(self.df['DateofHire'], errors='coerce')
-            #Maaş dağılımını normalize etmek için logaritmik dönüşüm uygulanır.
-            # Bu, aykırı değerlerin (outlier) etkisini azaltır.
             self.df['Log_Salary'] = np.log1p(self.df['Salary'])
-            # Veri setindeki 'M ' gibi boşluklu değerleri temizle.
-            # Bu olmadan cinsiyet pivot tablosu yanlış hesaplar.
             self.df['Sex'] = self.df['Sex'].str.strip()
-            logging.info(f"Veri başarıyla yüklendi. Toplam geçerli kayıt: {len(self.df)}")
+            logging.info(
+                f"Veri yüklendi: {self.file_path.name} | "
+                f"Toplam geçerli kayıt: {len(self.df)}"
+            )
         except FileNotFoundError:
             logging.error(f"Kritik Hata: {self.file_path} bulunamadı!")
             self.df = pd.DataFrame()
@@ -65,19 +52,10 @@ class HRDataEngine:
         """
         Kullanıcının dinamik olarak tanımladığı KPI'ları hesaplar.
         Whitelist tabanlı input validation ile güvenli hale getirilmiştir.
- 
-        Args:
-            department (str): Hedef departman adı. "All" tüm şirketi kapsar.
-            metric (str): Hesaplanacak sütun adı (ALLOWED_METRICS içinden).
-            calc_type (str): Hesaplama tipi (ALLOWED_CALC_TYPES içinden).
- 
-        Returns:
-            dict: Hesaplama sonucu veya hata mesajı.
         """
         if self.df.empty:
             return {"error": "Veri seti boş veya yüklenemedi."}
 
-        # GÜVENLİK: Sadece izin verilen metrik ve hesaplama tiplerine izin ver
         if metric not in ALLOWED_METRICS:
             return {"error": f"Geçersiz metrik: {metric}. İzin verilenler: {ALLOWED_METRICS}"}
         if calc_type not in ALLOWED_CALC_TYPES:
@@ -133,10 +111,16 @@ class HRDataEngine:
 
         numeric_df = self.df.select_dtypes(include=[np.number])
         corr_matrix = numeric_df.corr().round(2)
-        critical_corr = corr_matrix.loc[
-            'Salary',
-            ['EngagementSurvey', 'EmpSatisfaction', 'SpecialProjectsCount']
+
+        # Korelasyon için istenen sütunlar dataset'te yoksa esnek davran
+        available_cols = [
+            c for c in ['EngagementSurvey', 'EmpSatisfaction', 'SpecialProjectsCount']
+            if c in corr_matrix.columns
         ]
+        if not available_cols or 'Salary' not in corr_matrix.columns:
+            return {}
+
+        critical_corr = corr_matrix.loc['Salary', available_cols]
         return critical_corr.to_dict()
 
     def analyze_gender_pay_gap(self) -> dict:
@@ -147,51 +131,46 @@ class HRDataEngine:
         df['Sex'] = df['Sex'].str.strip()
 
         pivot = df.pivot_table(
-        values='Salary',
-        index='Department',
-        columns='Sex',
-        aggfunc='mean'
+            values='Salary',
+            index='Department',
+            columns='Sex',
+            aggfunc='mean'
         ).round(2).fillna(0)
-        
+
         if 'M' in pivot.columns and 'F' in pivot.columns:
             pivot['Pay_Gap_Percentage'] = (
-            ((pivot['M'] - pivot['F']) / pivot['M'].replace(0, float('nan'))) * 100
+                ((pivot['M'] - pivot['F']) / pivot['M'].replace(0, float('nan'))) * 100
             ).round(1).fillna(0)
 
         return pivot.to_dict(orient='index')
 
-
-
     def predict_flight_risk_advanced(self) -> list:
         """
         Algoritmik İstifa Tahmini (Churn Prediction):
-        Kural tabanlı (rule-based) model ile yüksek risk taşıyan
-        çalışanları tespit eder.
- 
+        Kural tabanlı model ile yüksek risk taşıyan çalışanları tespit eder.
+
         Risk Kriterleri (4 koşulun tamamı sağlanmalı):
         1. Bağlılık skoru 3.0'ın altında  → düşük motivasyon
         2. En az 2 yıldır şirkette         → öğrendiklerini götürme riski
         3. Özel projeye atanmamış          → gelişim fırsatı verilmemiş
         4. Hâlâ aktif çalışan              → işten çıkarılmamış
- 
-        NOT: self.df mutate edilmez, local kopya kullanılır.
-        Bu olmadan her çağrıda df'e Hire_Year/Tenure_Years sütunları birikir.
- 
-        Returns:
-            list: Yüksek risk taşıyan çalışanların listesi.
         """
         if self.df.empty:
             return []
 
-
+        # df mutate edilmez, local kopya kullanılır
         local_df = self.df.copy()
         current_year = pd.Timestamp.now().year
 
-        # Kıdem hesabı: işe giriş yılından bugünü çıkar.
         local_df['Hire_Year'] = pd.to_datetime(local_df['DateofHire']).dt.year
         local_df['Tenure_Years'] = current_year - local_df['Hire_Year']
 
-        # 4 koşulun tamamı AND operatörü ile birleştirilir.
+        # Dataset'te bu sütunlar yoksa boş liste döndür
+        required = ['EngagementSurvey', 'Tenure_Years', 'SpecialProjectsCount', 'Termd']
+        if not all(c in local_df.columns for c in required):
+            logging.warning("Flight risk için gerekli sütunlar eksik.")
+            return []
+
         risk_conditions = (
             (local_df['EngagementSurvey'] < 3.0) &
             (local_df['Tenure_Years'] >= 2) &
@@ -199,9 +178,11 @@ class HRDataEngine:
             (local_df['Termd'] == 0)
         )
 
-        # Frontend'e sadece gerekli sütunlar döndürülür (veri minimizasyonu).
         high_risk_employees = local_df[risk_conditions]
-        return high_risk_employees[
-            ['Employee_Name', 'Department', 'Salary', 'ManagerName']
-        ].to_dict(orient='records')
 
+        # Frontend'e sadece mevcut sütunlar döndürülür
+        return_cols = [
+            c for c in ['Employee_Name', 'Department', 'Salary', 'ManagerName']
+            if c in high_risk_employees.columns
+        ]
+        return high_risk_employees[return_cols].to_dict(orient='records')
