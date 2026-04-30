@@ -23,6 +23,33 @@ from dotenv import load_dotenv
 #API anahtarları ve dosya yolları buradan okunur.
 load_dotenv()
 
+from fastapi import UploadFile, File
+import pandas as pd
+
+@app.post("/api/v1/upload-dataset")
+async def upload_dataset(file: UploadFile = File(...)):
+    try:
+        # CSV dosyasını okur
+        df = pd.read_csv(file.file)
+
+        # DataEngine'e gönderir
+        engine = DataEngine(df)
+        summary = engine.get_risk_summary()
+
+        return {
+            "status": "success",
+            "message": "Dataset başarıyla yüklendi.",
+            "summary": summary
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+
 
 
 
