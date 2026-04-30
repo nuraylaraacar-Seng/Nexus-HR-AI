@@ -15,27 +15,7 @@ function App() {
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
 
-  const [newEmployee, setNewEmployee] = useState({
-  employee_name: '',
-  department: 'IT',
-  salary: '',
-  engagement_survey: 3.5,
-  performance_score: 'Fully Meets'
-});
-
-
-  const handleAddEmployee = async (e) => {
-  e.preventDefault();
-  try {
-    const res = await axios.post(`${API_BASE}/employees/add`, newEmployee);
-    alert("Çalışan başarıyla eklendi!");
-    // Ekleme sonrası dashboard'u güncellemek için fetch fonksiyonlarını tekrar çağır
-    fetchKPI();
-    fetchFlightRisk();
-  } catch (err) {
-    console.error("Ekleme hatası:", err);
-  }
-};
+  
 
   // Sayfa açılınca KPI + risk + pay-gap çek
   useEffect(() => {
