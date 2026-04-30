@@ -103,34 +103,80 @@ const handleFileUpload = async (e) => {
   };
 
   return ( 
-    <div style={{ marginBottom: "20px" }}>
-  <input
-    type="file"
-    accept=".csv"
-    onChange={handleFileUpload}
-  />
-</div>
-
     <div style={styles.page}>
-      {/* HEADER */}
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.title}>🎯 Nexus HR: Enterprise AI Dashboard</h1>
-          <p style={styles.subtitle}>Kurumsal Veri Analiz ve Karar Destek Platformu</p>
-          <div style={{
-        width: '120px',
-        height: '4px',
-        margin: '12px auto 0',
-        borderRadius: '4px',
-        background: 'linear-gradient(90deg, #9b59b6, #3498db)'
+
+    {/* DOSYA YÜKLEME BUTONU */}
+    <div style={{ marginBottom: "20px" }}>
+      <input
+        type="file"
+        accept=".csv"
+        onChange={handleFileUpload}
+      />
+    </div>
+
+    {/* HEADER */}
+    <header style={styles.header}>
+      <div>
+        <h1 style={styles.title}>🎯 Nexus HR: Enterprise AI Dashboard</h1>
+        <p style={styles.subtitle}>Kurumsal Veri Analiz ve Karar Destek Platformu</p>
+        <div style={{
+          width: '120px',
+          height: '4px',
+          margin: '12px auto 0',
+          borderRadius: '4px',
+          background: 'linear-gradient(90deg, #9b59b6, #3498db)'
         }} />
-        </div>
-      </header>
+      </div>
+    </header>
 
-      
+    {/* KPI KARTLARI */}
+    <div style={styles.cardRow}>
+
+      <div className="card" style={styles.card}>
+        <Users size={28} color="#3498db" />
+        <h3 style={styles.cardLabel}>İstifa Riski</h3>
+        <p style={styles.cardValue}>{riskList.length} Çalışan</p>
+      </div>
+
+      <div className="card" style={styles.card}>
+        <DollarSign size={28} color="#2ecc71" />
+        <h3 style={styles.cardLabel}>Ort. Maaş</h3>
+        <p style={styles.cardValue}>
+          {kpiData ? `$${kpiData.value.toLocaleString()}` : '...'}
+        </p>
+      </div>
+
+      <div className="card" style={styles.card}>
+        <Activity size={28} color="#e74c3c" />
+        <h3 style={styles.cardLabel}>Departman Sayısı</h3>
+        <p style={styles.cardValue}>{payGap.length}</p>
+      </div>
+
+      <div className="card" style={styles.card}>
+        <AlertTriangle size={28} color="#f39c12" />
+        <h3 style={styles.cardLabel}>Risk Oranı</h3>
+        <p style={styles.cardValue}>
+          {summary
+            ? `%${((riskList.length / summary.total_employees) * 100).toFixed(0)}`
+            : '...'}
+        </p>
+      </div>
+
+    </div>
+
+    {/* YÜKLENEN DATASET ÖZETİ */}
+    {summary && (
+      <div className="uploaded-summary">
+        <h3>📁 Yüklenen Dataset Özeti</h3>
+        <p>Toplam çalışan: {summary.total_employees}</p>
+        <p>Ortalama maaş: {summary.average_salary}</p>
+        <p>Yüksek riskli çalışan: {summary.flight_risk_count}</p>
+        <p>Bağlılık skoru: {summary.average_engagement}</p>
+      </div>
+    )}
 
 
-       {/* KPI KARTLARI */}
+    
 {/* KPI KARTLARI */}
 <div style={styles.cardRow}>
 
