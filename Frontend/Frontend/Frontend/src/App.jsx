@@ -16,13 +16,29 @@ function App() {
   const [error, setError]             = useState(null);
 
   
-
+  const [summary, setSummary] = useState(null);
   // Sayfa açılınca KPI + risk + pay-gap çek
   useEffect(() => {
     fetchKPI();
     fetchFlightRisk();
     fetchPayGap();
   }, []);
+
+
+  const handleFileUpload = async (e) => {
+  const file = e.target.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await fetch("https://nexus-hr-ai-production.up.railway.app/api/v1/upload-dataset", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  setSummary(data.summary);
+};
+
 
   const fetchKPI = async () => {
     try {
@@ -91,6 +107,13 @@ function App() {
         </div>
       </header>
 
+      <input
+  type="file"
+  accept=".csv"
+  onChange={handleFileUpload}
+/>
+
+
        {/* KPI KARTLARI */}
 {/* KPI KARTLARI */}
 <div style={styles.cardRow}>
@@ -126,6 +149,17 @@ function App() {
   </div>
 
 </div>
+
+    {summary && (
+  <div className="uploaded-summary">
+    <h3>📁 Yüklenen Dataset Özeti</h3>
+    <p>Toplam çalışan: {summary.total_employees}</p>
+    <p>Ortalama maaş: {summary.average_salary}</p>
+    <p>Yüksek riskli çalışan: {summary.flight_risk_count}</p>
+    <p>Bağlılık skoru: {summary.average_engagement}</p>
+  </div>
+)}
+
 
 
       <div style={styles.twoCol}>
