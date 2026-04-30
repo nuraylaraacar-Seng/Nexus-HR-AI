@@ -122,8 +122,23 @@ class KPIRequest(BaseModel):
 
 @app.post("/api/v1/upload-dataset")
 async def upload_dataset(file: UploadFile = File(...)):
+    from pandas.errors import EmptyDataError
+    global engine
+
     try:
-        df = pd.read_csv(file.file)
+        # Dosyayı önce RAM'de oku (validasyon için)
+        contents = await file.read()
+
+        # Boş dosya kontrolü
+        if not contents:
+            return {
+                "status": "error",
+                "message": "Boş dataset yüklenemez."
+            }
+
+        # DataFrame olarak kontrol et (kolonlar vs.)
+        from io import BytesIO
+        df = pd.read_csv(BytesIO(contents))
 
         if df.empty:
             return {
@@ -140,9 +155,15 @@ async def upload_dataset(file: UploadFile = File(...)):
                 "message": f"Eksik kolonlar: {missing}"
             }
 
-        # GLOBAL engine'i güncelle
-        global engine
-        engine = HRDataEngine(df)
+        # ✅ Asıl kritik kısım: dosyayı sabit path'e yaz
+        save_path = Path(DATA_PATH)  # DATA_PATH zaten yukarıda tanımlı
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(save_path, "wb") as f:
+            f.write(contents)
+
+        # ✅ Engine'i YENİDEN, dosya yoluyla başlat
+        engine = HRDataEngine(str(save_path))
 
         summary = engine.get_risk_summary()
 
