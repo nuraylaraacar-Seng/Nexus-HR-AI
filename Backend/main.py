@@ -25,28 +25,7 @@ load_dotenv()
 
 from fastapi import UploadFile, File
 import pandas as pd
-
-@app.post("/api/v1/upload-dataset")
-async def upload_dataset(file: UploadFile = File(...)):
-    try:
-        # CSV dosyasını okur
-        df = pd.read_csv(file.file)
-
-        # DataEngine'e gönderir
-        engine = DataEngine(df)
-        summary = engine.get_risk_summary()
-
-        return {
-            "status": "success",
-            "message": "Dataset başarıyla yüklendi.",
-            "summary": summary
-        }
-
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e)
-        }
+from pandas.errors import EmptyDataError
 
 
 
@@ -138,6 +117,55 @@ class KPIRequest(BaseModel):
 
 
 # --- API ENDPOİNTLERİ ---
+
+
+
+@app.post("/api/v1/upload-dataset")
+async def upload_dataset(file: UploadFile = File(...)):
+    try:
+        df = pd.read_csv(file.file)
+
+        if df.empty:
+            return {
+                "status": "error",
+                "message": "Boş dataset yüklenemez."
+            }
+
+        required_cols = ["Salary", "Department", "Termd", "EngagementSurvey"]
+        missing = [c for c in required_cols if c not in df.columns]
+
+        if missing:
+            return {
+                "status": "error",
+                "message": f"Eksik kolonlar: {missing}"
+            }
+
+        # GLOBAL engine'i güncelle
+        global engine
+        engine = HRDataEngine(df)
+
+        summary = engine.get_risk_summary()
+
+        return {
+            "status": "success",
+            "message": "Dataset başarıyla yüklendi.",
+            "summary": summary
+        }
+
+    except EmptyDataError:
+        return {
+            "status": "error",
+            "message": "CSV dosyası boş görünüyor."
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+
+
 
 @app.post("/api/v1/analytics/kpi")
 @limiter.limit("30/minute")
