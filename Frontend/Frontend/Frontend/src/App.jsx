@@ -3,89 +3,106 @@ import axios from 'axios';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
-import { Activity, Users, DollarSign, BrainCircuit, AlertTriangle, Upload, X, CheckCircle, Database, LogOut } from 'lucide-react';
+import { Activity, Users, DollarSign, BrainCircuit, AlertTriangle, Upload, X, CheckCircle, Database, LogOut, Settings } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api/v1';
 
-function makeHeaders(sid) {
-  return sid ? { 'X-Session-ID': sid } : {};
-}
+// --- AXIOS INTERCEPTOR --- 
+// Her isteğe otomatik Session ID ekleyerek kimlik sorununu kökten çözer
+axios.interceptors.request.use((config) => {
+  const session = sessionStorage.getItem('nexus_session');
+  if (session && !config.headers['X-Session-ID']) {
+    config.headers['X-Session-ID'] = session;
+  }
+  return config;
+});
 
-const fmtSize = (bytes) =>
-  bytes < 1024 * 1024
-    ? `${(bytes / 1024).toFixed(1)} KB`
-    : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+const fmtSize = (bytes) => bytes < 1024 * 1024
+  ? `${(bytes / 1024).toFixed(1)} KB`
+  : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
 export default function App() {
-  const [sessionId, setSessionId] = useState(
-    () => sessionStorage.getItem('nexus_session') || null
-  );
-  const [summary,   setSummary]   = useState(null);
-  const [aiReport,  setAiReport]  = useState(null);
-  const [riskList,  setRiskList]  = useState([]);
-  const [payGap,    setPayGap]    = useState([]);
-  const [kpiData,   setKpiData]   = useState(null);
-  const [loading,   setLoading]   = useState(false);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [error,     setError]     = useState(null);
+  const [sessionId,   setSessionId]   = useState(() => sessionStorage.getItem('nexus_session'));
+  const [summary,     setSummary]     = useState(null);
+
+  const [aiReport,    setAiReport]    = useState(null);
+  const [riskList,    setRiskList]    = useState([]);
+  const [payGap,      setPayGap]      = useState([]);
+  const [kpiData,     setKpiData]     = useState(null);
+
+  const [loading,     setLoading]     = useState(false);
+  const [aiLoading,   setAiLoading]   = useState(false);
+  const [error,       setError]       = useState(null);
+
+  // --- UPLOAD & MAPPING STATES ---
   const [uploadFile,  setUploadFile]  = useState(null);
   const [uploading,   setUploading]   = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [dragOver,    setDragOver]    = useState(false);
   const fileInputRef = useRef();
 
-  // ★ sid'i doğrudan parametre olarak alır — state closure tuzağını önler
-  const fetchAll = async (sid) => {
-    setLoading(true);
+  // YENİ: Eşleştirme (Mapping) UI için gerekli stateler
+  const [showMapping, setShowMapping] = useState(false);
+  const [fileColumns, setFileColumns] = useState([]);
+  const [tempSession, setTempSession] = useState(null);
+  const [mappingData, setMappingData] = useState({
+    Salary: '',
+    Department: '',
+    Termd: '',
+    EngagementSurvey: ''
+  });
+
+  // Session değişince analizleri yeniden çek
+  useEffect(() => {
     setAiReport(null);
     setError(null);
-    const h = makeHeaders(sid);
+    setLoading(true);
+    Promise.all([fetchKPI(), fetchFlightRisk(), fetchPayGap()])
+      .finally(() => setLoading(false));
+  }, [sessionId]);
+
+  const fetchKPI = async () => {
     try {
-      const [kpiRes, riskRes, gapRes] = await Promise.all([
-        axios.post(
-          `${API_BASE}/analytics/kpi`,
-          { department: 'All', metric: 'Salary', calc_type: 'mean' },
-          { headers: h }
-        ),
-        axios.get(`${API_BASE}/analytics/flight-risk`, { headers: h }),
-        axios.get(`${API_BASE}/analytics/gender-pay-gap`, { headers: h }),
-      ]);
+      const res = await axios.post(`${API_BASE}/analytics/kpi`, {
+        department: 'All', metric: 'Salary', calc_type: 'mean'
+      });
+      setKpiData(res.data.data);
+    } catch (e) { console.error('KPI hatası:', e); }
+  };
 
-      setKpiData(kpiRes.data.data);
-      setRiskList(riskRes.data.data ?? []);
+  const fetchFlightRisk = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/analytics/flight-risk`);
+      setRiskList(res.data.data);
+    } catch (e) { console.error('Flight risk hatası:', e); }
+  };
 
-      const formatted = Object.entries(gapRes.data.data ?? {}).map(([dept, vals]) => ({
+  const fetchPayGap = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/analytics/gender-pay-gap`);
+      const formatted = Object.entries(res.data.data).map(([dept, vals]) => ({
         department: dept,
         gap:    vals.Pay_Gap_Percentage ?? 0,
         male:   vals.M   ?? 0,
         female: vals.F   ?? 0,
       }));
       setPayGap(formatted);
-    } catch (e) {
-      console.error('fetchAll hatası:', e);
-      setError('Veriler alınamadı. Backend bağlantısını kontrol et.');
-    }
-    setLoading(false);
+    } catch (e) { console.error('Pay gap hatası:', e); }
   };
-
-  useEffect(() => {
-    fetchAll(sessionId);
-  }, []); // eslint-disable-line
 
   const fetchAIReport = async () => {
     setAiLoading(true);
     setError(null);
     try {
-      const res = await axios.get(`${API_BASE}/ai/executive-summary`, {
-        headers: makeHeaders(sessionId),
-      });
+      const res = await axios.get(`${API_BASE}/ai/executive-summary`);
       setAiReport(res.data.data);
     } catch {
-      setError("AI raporu alınamadı. Backend'in çalıştığından ve API key'in tanımlı olduğundan emin ol.");
+      setError("AI raporu alınamadı. Backend bağlantısını kontrol et.");
     }
     setAiLoading(false);
   };
 
+  // ── 1. AŞAMA: DOSYAYI YÜKLE VE KOLONLARI AL ──
   const handleFileSelect = (file) => {
     if (!file) return;
     if (!file.name.endsWith('.csv')) {
@@ -102,37 +119,64 @@ export default function App() {
     setUploadError(null);
     const formData = new FormData();
     formData.append('file', uploadFile);
+    
     try {
       const res = await axios.post(`${API_BASE}/upload-dataset`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
+      
       if (res.data.status === 'error') {
         setUploadError(res.data.message);
       } else {
-        const newSid = res.data.session_id;
-        sessionStorage.setItem('nexus_session', newSid);
-        setSessionId(newSid);
-        setSummary(res.data.summary);
-        setUploadFile(null);
-        // ★ State güncellemesini beklemeden yeni sid'i doğrudan geç
-        await fetchAll(newSid);
+        // Backend kolonları döndü! Artık Modal'ı açıyoruz.
+        setFileColumns(res.data.columns);
+        setTempSession(res.data.session_id);
+        setShowMapping(true);
       }
     } catch (e) {
-      setUploadError(e.response?.data?.message || 'Yükleme başarısız.');
+      setUploadError(e.response?.data?.message || 'Yükleme başarısız. API ayakta mı?');
+    }
+    setUploading(false);
+  };
+
+  // ── 2. AŞAMA: EŞLEŞTİRMEYİ (MAPPING) ONAYLA VE MOTORU BAŞLAT ──
+  const applyMapping = async () => {
+    // Zorunlu alanların seçilip seçilmediğini kontrol et
+    if (!mappingData.Salary || !mappingData.Department || !mappingData.Termd || !mappingData.EngagementSurvey) {
+      alert("Lütfen tüm eşleştirmeleri yapın!");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const res = await axios.post(`${API_BASE}/session/apply-mapping`, 
+        { mapping: mappingData },
+        { headers: { 'X-Session-ID': tempSession } } // Özel olarak geçici ID'yi yolluyoruz
+      );
+
+      if (res.data.status === 'success') {
+        // Her şey harika! Artık ID'yi kalıcı olarak kaydedebiliriz
+        sessionStorage.setItem('nexus_session', tempSession);
+        setSessionId(tempSession);
+        setSummary(res.data.summary);
+        setShowMapping(false);
+        setUploadFile(null);
+      } else {
+        setUploadError(res.data.message);
+      }
+    } catch (e) {
+      setUploadError(e.response?.data?.detail || 'Eşleştirme başarısız oldu.');
     }
     setUploading(false);
   };
 
   const handleLogout = async () => {
     if (!sessionId) return;
-    try {
-      await axios.delete(`${API_BASE}/session`, { headers: makeHeaders(sessionId) });
-    } catch {}
+    try { await axios.delete(`${API_BASE}/session`); } catch {}
     sessionStorage.removeItem('nexus_session');
     setSessionId(null);
     setSummary(null);
     setAiReport(null);
-    await fetchAll(null);
   };
 
   const totalEmployees = kpiData?.total_employees ?? 0;
@@ -141,230 +185,328 @@ export default function App() {
     : '—';
 
   return (
-    <div style={s.page}>
+    <div className="page">
 
-      <header style={s.topbar}>
-        <div style={s.tbLeft}>
-          <div style={s.logo}>NX</div>
-          <div>
-            <h1 style={s.title}>Nexus HR</h1>
-            <p style={s.sub}>Enterprise Intelligence Platform</p>
+      {/* ── EŞLEŞTİRME MODAL PENCERESİ (MAPPING UI) ── */}
+      {showMapping && (
+        <div className="modal-overlay">
+          <div className="mapping-modal">
+            <div className="modal-header">
+              <Settings size={24} color="#6366f1" />
+              <h2>Kolon Eşleştirme (Data Mapping)</h2>
+            </div>
+            <p className="modal-desc">
+              Yüklediğin <strong>{uploadFile?.name}</strong> dosyasındaki kolon isimleri farklı. 
+              Sistemin analiz yapabilmesi için lütfen aşağıdaki eşleştirmeleri yap:
+            </p>
+            
+            <div className="mapping-grid">
+              {[
+                { key: 'Salary', label: 'Maaş Kolonu (Sayısal olmalı)', hint: 'Örn: MonthlyIncome' },
+                { key: 'Department', label: 'Departman Kolonu', hint: 'Örn: Department' },
+                { key: 'Termd', label: 'İstifa/Ayrılma Kolonu', hint: 'Örn: Attrition' },
+                { key: 'EngagementSurvey', label: 'Memnuniyet/Bağlılık Skoru', hint: 'Örn: EnvironmentSatisfaction' }
+              ].map((item) => (
+                <div className="mapping-row" key={item.key}>
+                  <label>{item.label}</label>
+                  <select 
+                    value={mappingData[item.key]} 
+                    onChange={(e) => setMappingData({ ...mappingData, [item.key]: e.target.value })}
+                  >
+                    <option value="">-- Kolon Seç --</option>
+                    {fileColumns.map(col => <option key={col} value={col}>{col}</option>)}
+                  </select>
+                  <span className="hint-text">{item.hint}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="modal-actions">
+              <button className="cancel-btn" onClick={() => setShowMapping(false)}>İptal</button>
+              <button className="apply-btn" onClick={applyMapping} disabled={uploading}>
+                {uploading ? 'İşleniyor...' : 'Eşleştir ve Motoru Başlat'}
+              </button>
+            </div>
           </div>
         </div>
-        {sessionId ? (
-          <div style={{...s.badge, ...s.badgeCustom}}>
-            <CheckCircle size={13} />
-            <span>Özel dataset aktif</span>
-            <button style={s.logoutBtn} onClick={handleLogout} title="Session'ı sil">
-              <LogOut size={13} />
-            </button>
+      )}
+
+      {/* ── TOP BAR */}
+      <header className="topbar">
+        <div className="topbar-left">
+          <span className="logo-mark">NX</span>
+          <div>
+            <h1 className="title">Nexus HR</h1>
+            <p className="subtitle">Enterprise Intelligence Platform</p>
           </div>
-        ) : (
-          <div style={{...s.badge, ...s.badgeDefault}}>
-            <Database size={13} />
-            <span>Varsayılan dataset</span>
-          </div>
-        )}
+        </div>
+        <div className="topbar-right">
+          {sessionId ? (
+            <div className="session-badge">
+              <CheckCircle size={14} />
+              <span>Özel Dataset</span>
+              <button className="logout-btn" onClick={handleLogout} title="Session'ı Sil">
+                <LogOut size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="session-badge default">
+              <Database size={14} />
+              <span>Varsayılan Dataset</span>
+            </div>
+          )}
+        </div>
       </header>
 
-      {/* UPLOAD */}
-      <div
-        style={{
-          ...s.dropzone,
-          ...(dragOver ? s.dzOver : {}),
-          ...(uploadFile ? s.dzHasFile : {}),
-        }}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files[0]); }}
-        onClick={() => !uploadFile && fileInputRef.current.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".csv"
-          style={{ display: 'none' }}
-          onChange={(e) => handleFileSelect(e.target.files[0])}
-        />
-        {!uploadFile ? (
-          <div style={{ textAlign: 'center' }}>
-            <Upload size={26} style={{ color: '#94a3b8', marginBottom: 8 }} />
-            <p style={s.dzLabel}>CSV dosyanı sürükle bırak ya da <u>seç</u></p>
-            <p style={s.dzHint}>Zorunlu kolonlar: Salary · Department · Termd · EngagementSurvey</p>
-          </div>
-        ) : (
-          <div style={s.filePrev}>
-            <CheckCircle size={18} color="#10b981" />
-            <span style={s.fileName}>{uploadFile.name}</span>
-            <span style={s.fileSize}>{fmtSize(uploadFile.size)}</span>
-            <button style={s.removeBtn} onClick={(e) => { e.stopPropagation(); setUploadFile(null); }}>
-              <X size={13} />
-            </button>
+      {/* ── UPLOAD PANEL */}
+      <section className="upload-section">
+        <div
+          className={`dropzone ${dragOver ? 'drag-over' : ''} ${uploadFile ? 'has-file' : ''}`}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files[0]); }}
+          onClick={() => !uploadFile && fileInputRef.current.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileSelect(e.target.files[0])}
+          />
+          {!uploadFile ? (
+            <>
+              <Upload size={28} className="dz-icon" />
+              <p className="dz-label">Kaggle'dan veya Kendi CSV'ni sürükle bırak</p>
+              <p className="dz-hint">Kolon isimleri önemli değil, içeride eşleştireceğiz!</p>
+            </>
+          ) : (
+            <div className="file-preview">
+              <CheckCircle size={20} color="#10b981" />
+              <span className="file-name">{uploadFile.name}</span>
+              <span className="file-size">{fmtSize(uploadFile.size)}</span>
+              <button className="remove-btn" onClick={(e) => { e.stopPropagation(); setUploadFile(null); }}>
+                <X size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {uploadFile && !showMapping && (
+          <button className="upload-btn" onClick={handleUpload} disabled={uploading}>
+            {uploading ? '⏳ Okunuyor...' : '📤 Dosyayı Oku ve Eşleştir'}
+          </button>
+        )}
+
+        {uploadError && <p className="upload-error">⚠ {uploadError}</p>}
+
+        {summary && (
+          <div className="summary-strip">
+            <span>✅ Dataset eşleştirildi ve yüklendi</span>
+            <span className="sep">·</span>
+            <span><strong>{summary.total_employees}</strong> çalışan</span>
+            <span className="sep">·</span>
+            <span>Ort. maaş <strong>${summary.average_salary?.toLocaleString()}</strong></span>
+            <span className="sep">·</span>
+            <span>Risk <strong>{summary.flight_risk_count}</strong> kişi</span>
           </div>
         )}
-      </div>
+      </section>
 
-      {uploadFile && (
-        <button style={s.uploadBtn} onClick={handleUpload} disabled={uploading}>
-          {uploading ? '⏳ Yükleniyor…' : '📤 Dataset Yükle & Analiz Et'}
-        </button>
-      )}
-      {uploadError && <p style={s.uploadErr}>⚠ {uploadError}</p>}
-
-      {summary && (
-        <div style={s.summaryStrip}>
-          <CheckCircle size={14} color="#16a34a" />
-          <span>Dataset yüklendi</span>
-          <span style={s.sep}>·</span>
-          <span><strong>{summary.total_employees?.toLocaleString()}</strong> çalışan</span>
-          <span style={s.sep}>·</span>
-          <span>Ort. maaş <strong>${summary.average_salary?.toLocaleString()}</strong></span>
-          <span style={s.sep}>·</span>
-          <span>Risk <strong>{summary.flight_risk_count}</strong> kişi</span>
-          <span style={s.sep}>·</span>
-          <span>Bağlılık <strong>{summary.average_engagement}</strong></span>
-        </div>
-      )}
-
-      {/* KPI */}
-      <div style={s.kpiRow}>
+      {/* ── KPI KARTI SATIRLARI */}
+      <div className="kpi-row">
         {[
-          { icon: <Users size={20} />,        label: 'Toplam çalışan', value: loading ? '…' : (totalEmployees ? totalEmployees.toLocaleString() : '—'), acc: '#3b82f6' },
-          { icon: <DollarSign size={20} />,    label: 'Ort. maaş',     value: loading ? '…' : (kpiData ? `$${kpiData.value.toLocaleString()}` : '—'), acc: '#10b981' },
-          { icon: <AlertTriangle size={20} />, label: 'İstifa riski',  value: loading ? '…' : `${riskList.length} kişi`, acc: '#f59e0b' },
-          { icon: <Activity size={20} />,      label: 'Risk oranı',    value: loading ? '…' : riskRate, acc: '#ef4444' },
-          { icon: <Database size={20} />,      label: 'Departman',     value: loading ? '…' : (payGap.length || '—'), acc: '#8b5cf6' },
+          { icon: <Users size={22} />,         label: 'Toplam Çalışan',  value: loading ? '…' : (totalEmployees || '—'), color: '#3b82f6' },
+          { icon: <DollarSign size={22} />,     label: 'Ort. Maaş',      value: loading ? '…' : (kpiData ? `$${kpiData.value.toLocaleString()}` : '—'), color: '#10b981' },
+          { icon: <AlertTriangle size={22} />,  label: 'İstifa Riski',   value: loading ? '…' : `${riskList.length} kişi`, color: '#f59e0b' },
+          { icon: <Activity size={22} />,       label: 'Risk Oranı',     value: loading ? '…' : riskRate, color: '#ef4444' },
+          { icon: <Database size={22} />,       label: 'Departman',      value: loading ? '…' : (payGap.length || '—'), color: '#8b5cf6' },
         ].map((k, i) => (
-          <div key={i} style={{ ...s.kpiCard, borderTop: `3px solid ${k.acc}` }}>
-            <div style={{ color: k.acc }}>{k.icon}</div>
-            <div>
-              <p style={s.kpiLabel}>{k.label}</p>
-              <p style={s.kpiValue}>{k.value}</p>
+          <div className="kpi-card" key={i} style={{ '--accent': k.color }}>
+            <div className="kpi-icon">{k.icon}</div>
+            <div className="kpi-body">
+              <span className="kpi-label">{k.label}</span>
+              <span className="kpi-value">{k.value}</span>
             </div>
           </div>
         ))}
       </div>
 
-      <div style={s.twoCol}>
-        <div style={s.panel}>
-          <h2 style={s.panelTitle}>Cinsiyet Maaş Uçurumu (%)</h2>
-          {loading && <p style={s.muted}>Yükleniyor…</p>}
-          {!loading && payGap.length === 0 && <p style={s.muted}>Veri bulunamadı.</p>}
-          {payGap.length > 0 && (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={payGap} margin={{ top: 8, right: 8, left: -18, bottom: 48 }}>
-                <XAxis dataKey="department" tick={{ fontSize: 11 }} angle={-35} textAnchor="end" interval={0} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip
-                  formatter={(v) => [`${v}%`, 'Pay Gap']}
-                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,.1)' }}
-                />
-                <Bar dataKey="gap" radius={[5, 5, 0, 0]}>
-                  {payGap.map((e, i) => (
-                    <Cell key={i} fill={e.gap > 0 ? '#ef4444' : '#10b981'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-          <p style={s.hint}>
-            <span style={{ color: '#ef4444' }}>● </span>Erkek lehine &nbsp;
-            <span style={{ color: '#10b981' }}>● </span>Kadın lehine
-          </p>
+      {/* ── ANA İÇERİK */}
+      <div className="content-grid">
+        <div className="panel">
+          <h2 className="panel-title">Departman Bazlı Cinsiyet Maaş Uçurumu (%)</h2>
+          {payGap.length === 0 && !loading && <p className="empty-state">Veri bulunamadı.</p>}
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={payGap} margin={{ top: 8, right: 8, left: -16, bottom: 40 }}>
+              <XAxis dataKey="department" tick={{ fontSize: 11, fill: '#64748b' }} angle={-35} textAnchor="end" interval={0} />
+              <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+              <Tooltip formatter={(v) => [`${v}%`, 'Pay Gap']} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+              <Bar dataKey="gap" radius={[5, 5, 0, 0]}>
+                {payGap.map((e, i) => <Cell key={i} fill={e.gap > 0 ? '#ef4444' : '#10b981'} />)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+          <p className="chart-legend"><span className="dot red" /> Erkek lehine &nbsp; <span className="dot green" /> Kadın lehine</p>
         </div>
 
-        <div style={s.panel}>
-          <h2 style={s.panelTitle}>İstifa Riski Yüksek Çalışanlar</h2>
-          <div style={s.riskList}>
-            {loading && <p style={s.muted}>Yükleniyor…</p>}
-            {!loading && riskList.length === 0 && <p style={s.muted}>Risk taşıyan çalışan bulunamadı.</p>}
+        <div className="panel">
+          <h2 className="panel-title">İstifa Riski Yüksek Çalışanlar</h2>
+          <div className="risk-list">
+            {loading && <p className="empty-state">Yükleniyor…</p>}
+            {!loading && riskList.length === 0 && <p className="empty-state">Risk taşıyan çalışan bulunamadı.</p>}
             {riskList.map((emp, i) => (
-              <div key={i} style={s.riskItem}>
-                <div style={s.avatar}>{emp.Employee_Name?.[0] ?? '?'}</div>
-                <div style={s.riskInfo}>
-                  <strong style={{ fontSize: 13 }}>{emp.Employee_Name}</strong>
-                  <span style={s.riskDept}>{emp.Department}</span>
+              <div key={i} className="risk-item">
+                <div className="risk-avatar">{emp.Employee_Name?.[0] ?? '?'}</div>
+                <div className="risk-info">
+                  <strong>{emp.Employee_Name || "Anonim Çalışan"}</strong>
+                  <span className="risk-dept">{emp.Department}</span>
                 </div>
-                <span style={s.riskSalary}>${emp.Salary?.toLocaleString()}</span>
+                <span className="risk-salary">${emp.Salary?.toLocaleString()}</span>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div style={s.aiPanel}>
-        <div style={s.aiHeader}>
-          <BrainCircuit size={26} color="#6366f1" />
+      {/* ── AI PANELİ */}
+      <div className="ai-panel">
+        <div className="ai-header">
+          <BrainCircuit size={28} />
           <div>
-            <h2 style={s.aiTitle}>Yapay Zeka Strateji Merkezi</h2>
-            <p style={s.aiSub}>
-              {sessionId
-                ? 'Yüklediğin dataset üzerinden analiz yapılacak.'
-                : 'Varsayılan dataset üzerinden analiz yapılacak.'}
+            <h2 className="ai-title">Yapay Zeka Strateji Merkezi</h2>
+            <p className="ai-sub">
+              {sessionId ? 'Yüklediğin dataset üzerinden analiz yapılacak.' : 'Varsayılan dataset üzerinden analiz yapılacak.'}
             </p>
           </div>
         </div>
-        <button style={s.aiBtn} onClick={fetchAIReport} disabled={aiLoading}>
+        <button className="ai-btn" onClick={fetchAIReport} disabled={aiLoading}>
           {aiLoading ? '⏳ Analiz ediliyor…' : '🚀 Stratejik Özet Üret'}
         </button>
-        {error && <div style={s.errorBox}>{error}</div>}
+        {error && <div className="error-box">{error}</div>}
         {aiReport && (
-          <div style={s.aiResult}>
-            <h3 style={s.aiReportTitle}>{aiReport.report_title}</h3>
-            <p style={s.aiReportBody}>{aiReport.ai_insight}</p>
+          <div className="ai-result">
+            <h3 className="ai-report-title">{aiReport.report_title}</h3>
+            <p className="ai-report-body">{aiReport.ai_insight}</p>
           </div>
         )}
       </div>
+
+      <style>{`
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+          --bg:       #f1f5f9;
+          --surface:  #ffffff;
+          --border:   #e2e8f0;
+          --text:     #0f172a;
+          --muted:    #64748b;
+          --radius:   14px;
+          --shadow:   0 2px 12px rgba(0,0,0,0.06);
+          --font:     'DM Sans', 'Segoe UI', sans-serif;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+        body { font-family: var(--font); background: var(--bg); color: var(--text); }
+        .page { max-width: 1280px; margin: 0 auto; padding: 28px 24px 60px; }
+
+        /* MODAL (YENİ) */
+        .modal-overlay {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
+          display: flex; align-items: center; justify-content: center; z-index: 999;
+        }
+        .mapping-modal {
+          background: #fff; width: 500px; padding: 32px;
+          border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+        .modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .modal-header h2 { font-size: 20px; font-weight: 700; color: #1e293b; }
+        .modal-desc { font-size: 14px; color: #475569; margin-bottom: 24px; line-height: 1.5; }
+        .mapping-grid { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+        .mapping-row { display: flex; flex-direction: column; gap: 6px; }
+        .mapping-row label { font-size: 13px; font-weight: 600; color: #334155; }
+        .mapping-row select {
+          padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+          font-family: var(--font); font-size: 14px; color: #0f172a; outline: none;
+        }
+        .mapping-row select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .hint-text { font-size: 11px; color: #94a3b8; font-style: italic; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+        .cancel-btn {
+          padding: 10px 20px; background: transparent; border: 1px solid #cbd5e1;
+          border-radius: 8px; color: #475569; font-weight: 600; cursor: pointer;
+        }
+        .apply-btn {
+          padding: 10px 20px; background: #6366f1; border: none;
+          border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer;
+        }
+        .apply-btn:disabled { opacity: 0.6; }
+
+        /* TOPBAR */
+        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+        .topbar-left { display: flex; align-items: center; gap: 14px; }
+        .logo-mark { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #1e293b 0%, #334155 100%); color: #f8fafc; font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+        .title { font-size: 22px; font-weight: 700; color: var(--text); }
+        .subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .session-badge { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; background: #dcfce7; color: #166534; font-size: 13px; font-weight: 500; }
+        .session-badge.default { background: #f1f5f9; color: var(--muted); }
+        .logout-btn { background: none; border: none; cursor: pointer; color: inherit; display: flex; align-items: center; padding: 0 0 0 4px; opacity: 0.7; }
+
+        /* UPLOAD */
+        .upload-section { margin-bottom: 24px; }
+        .dropzone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px; text-align: center; cursor: pointer; background: var(--surface); transition: all .2s; }
+        .dropzone:hover, .dropzone.drag-over { border-color: #3b82f6; background: #eff6ff; }
+        .dropzone.has-file { cursor: default; border-style: solid; border-color: #10b981; background: #f0fdf4; }
+        .dz-icon { color: var(--muted); margin-bottom: 10px; }
+        .dz-label { font-size: 15px; color: var(--text); margin-bottom: 4px; }
+        .dz-hint { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+        .file-preview { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .file-name { font-weight: 600; font-size: 15px; }
+        .file-size { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+        .remove-btn { background: none; border: none; cursor: pointer; color: #ef4444; display: flex; align-items: center; padding: 4px; border-radius: 6px; transition: background .15s; }
+        .upload-btn { margin-top: 14px; padding: 11px 28px; background: #1e293b; color: #f8fafc; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .upload-error { margin-top: 10px; color: #ef4444; font-size: 13px; }
+        .summary-strip { margin-top: 14px; padding: 12px 18px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; display: flex; align-items: center; gap: 10px; font-size: 14px; color: #166534; flex-wrap: wrap; }
+        .sep { color: #86efac; }
+
+        /* KPI */
+        .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+        .kpi-card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; display: flex; align-items: center; gap: 14px; border-top: 3px solid var(--accent); }
+        .kpi-icon { color: var(--accent); flex-shrink: 0; }
+        .kpi-body { display: flex; flex-direction: column; }
+        .kpi-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+        .kpi-value { font-size: 22px; font-weight: 700; color: var(--text); font-family: 'DM Mono', monospace; }
+
+        /* CONTENT GRID */
+        .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 22px; }
+        .panel { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+        .panel-title { font-size: 15px; font-weight: 600; margin-bottom: 18px; color: var(--text); }
+        .empty-state { color: var(--muted); font-size: 14px; padding: 20px 0; text-align: center; }
+        .chart-legend { font-size: 12px; color: var(--muted); margin-top: 10px; display: flex; align-items: center; gap: 4px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot.red { background: #ef4444; } .dot.green { background: #10b981; }
+
+        /* RISK LIST */
+        .risk-list { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; padding-right: 4px; }
+        .risk-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #fff7ed; border-radius: 10px; border-left: 4px solid #f59e0b; }
+        .risk-avatar { width: 34px; height: 34px; border-radius: 50%; background: #fef3c7; color: #92400e; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+        .risk-info { flex: 1; display: flex; flex-direction: column; }
+        .risk-info strong { font-size: 14px; color: var(--text); }
+        .risk-dept { font-size: 12px; color: var(--muted); margin-top: 2px; }
+        .risk-salary { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 600; color: #10b981; }
+
+        /* AI PANEL */
+        .ai-panel { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 30px; border-top: 4px solid #6366f1; }
+        .ai-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 22px; color: #6366f1; }
+        .ai-title { font-size: 18px; font-weight: 700; color: var(--text); }
+        .ai-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+        .ai-btn { padding: 12px 28px; background: #6366f1; color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .error-box { margin-top: 16px; padding: 14px 18px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; color: #b91c1c; font-size: 14px; }
+        .ai-result { margin-top: 22px; padding: 22px 26px; background: #f5f3ff; border-radius: 12px; border-left: 5px solid #6366f1; }
+        .ai-report-title { font-size: 17px; font-weight: 700; color: #3730a3; margin-bottom: 14px; }
+        .ai-report-body { white-space: pre-line; color: #374151; line-height: 1.85; font-size: 14px; }
+      `}</style>
     </div>
   );
 }
-
-const s = {
-  page:      { padding: '28px 24px 60px', fontFamily: "'DM Sans','Segoe UI',sans-serif", background: '#f1f5f9', minHeight: '100vh', maxWidth: 1280, margin: '0 auto' },
-  topbar:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  tbLeft:    { display: 'flex', alignItems: 'center', gap: 12 },
-  logo:      { width: 42, height: 42, borderRadius: 10, background: '#1e293b', color: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, letterSpacing: 1 },
-  title:     { fontSize: 20, fontWeight: 700, color: '#0f172a', margin: 0 },
-  sub:       { fontSize: 12, color: '#64748b', margin: '2px 0 0' },
-  badge:     { display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500 },
-  badgeCustom:  { background: '#dcfce7', color: '#166534' },
-  badgeDefault: { background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0' },
-  logoutBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'flex', alignItems: 'center', padding: '0 0 0 4px', opacity: 0.7 },
-  dropzone:  { border: '2px dashed #cbd5e1', borderRadius: 14, padding: '26px 20px', textAlign: 'center', cursor: 'pointer', background: '#fff', transition: 'all .2s', marginBottom: 12 },
-  dzOver:    { borderColor: '#3b82f6', background: '#eff6ff' },
-  dzHasFile: { borderStyle: 'solid', borderColor: '#10b981', background: '#f0fdf4', cursor: 'default' },
-  dzLabel:   { fontSize: 14, color: '#334155', marginBottom: 4 },
-  dzHint:    { fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' },
-  filePrev:  { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' },
-  fileName:  { fontSize: 14, fontWeight: 600 },
-  fileSize:  { fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' },
-  removeBtn: { background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', padding: '2px 6px', borderRadius: 6 },
-  uploadBtn: { padding: '10px 22px', background: '#1e293b', color: '#f8fafc', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 10, display: 'block' },
-  uploadErr: { color: '#ef4444', fontSize: 12, marginBottom: 10 },
-  summaryStrip: { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '10px 16px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, fontSize: 13, color: '#166534', marginBottom: 16 },
-  sep:       { color: '#86efac' },
-  kpiRow:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 18 },
-  kpiCard:   { background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 },
-  kpiLabel:  { fontSize: 11, color: '#64748b', margin: '0 0 3px' },
-  kpiValue:  { fontSize: 20, fontWeight: 700, color: '#0f172a', margin: 0, fontFamily: 'monospace' },
-  twoCol:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 16, marginBottom: 18 },
-  panel:     { background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 22 },
-  panelTitle:{ fontSize: 14, fontWeight: 600, color: '#0f172a', margin: '0 0 14px' },
-  hint:      { fontSize: 11, color: '#94a3b8', marginTop: 8 },
-  muted:     { fontSize: 13, color: '#94a3b8', padding: '20px 0', textAlign: 'center' },
-  riskList:  { display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' },
-  riskItem:  { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: '#fff7ed', borderRadius: 9, borderLeft: '3px solid #f59e0b' },
-  avatar:    { width: 32, height: 32, borderRadius: '50%', background: '#fef3c7', color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 },
-  riskInfo:  { flex: 1, display: 'flex', flexDirection: 'column' },
-  riskDept:  { fontSize: 11, color: '#94a3b8', marginTop: 2 },
-  riskSalary:{ fontFamily: 'monospace', fontSize: 13, color: '#10b981', fontWeight: 600 },
-  aiPanel:   { background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', borderTop: '3px solid #6366f1', padding: 26 },
-  aiHeader:  { display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 18 },
-  aiTitle:   { fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0 },
-  aiSub:     { fontSize: 12, color: '#64748b', margin: '4px 0 0' },
-  aiBtn:     { padding: '11px 26px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
-  errorBox:  { marginTop: 14, padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#b91c1c', fontSize: 13 },
-  aiResult:  { marginTop: 18, padding: '18px 22px', background: '#f5f3ff', borderRadius: 12, borderLeft: '4px solid #6366f1' },
-  aiReportTitle: { fontSize: 15, fontWeight: 700, color: '#3730a3', margin: '0 0 12px' },
-  aiReportBody:  { fontSize: 13, color: '#374151', lineHeight: 1.85, whiteSpace: 'pre-line', margin: 0 },
-};
