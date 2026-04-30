@@ -121,48 +121,72 @@ class KPIRequest(BaseModel):
 @app.post("/api/v1/upload-dataset")
 async def upload_dataset(file: UploadFile = File(...)):
     """
-    Dataset yükler ve bu kullanıcıya özel bir session_id döndürür.
-    Sonraki tüm isteklerde bu session_id Header'da gönderilmelidir:
-        X-Session-ID: <session_id>
+    1. AŞAMA: Dosyayı alır, geçici kaydeder ve kolon isimlerini UI'a döner.
     """
     try:
         contents = await file.read()
-
         if not contents:
             return {"status": "error", "message": "Boş dosya yüklenemez."}
 
-        # DataFrame olarak doğrula
-        df = pd.read_csv(BytesIO(contents))
+        # Sadece ilk 5 satırı oku ki kolon isimlerini alabilelim
+        df = pd.read_csv(BytesIO(contents), nrows=5)
+        original_columns = df.columns.tolist()
 
-        required_cols = ["Salary", "Department", "Termd", "EngagementSurvey"]
-        missing = [c for c in required_cols if c not in df.columns]
-        if missing:
-            return {"status": "error", "message": f"Eksik kolonlar: {missing}"}
-
-        # Benzersiz session ID üret
         session_id = str(uuid.uuid4())
-
-        # Bu session'a ait dosyayı diske kaydet
-        save_path = SESSION_DATA_DIR / f"{session_id}.csv"
+        # Dosyayı "raw" (ham) olarak kaydediyoruz
+        save_path = SESSION_DATA_DIR / f"{session_id}_raw.csv"
+        
         with open(save_path, "wb") as f:
             f.write(contents)
 
-        # Bu session için özel engine oluştur
-        _session_engines[session_id] = HRDataEngine(str(save_path))
-        logging.info(f"Yeni session oluşturuldu: {session_id} | Dosya: {save_path.name}")
-
-        summary = _session_engines[session_id].get_risk_summary()
-
         return {
             "status": "success",
-            "message": "Dataset başarıyla yüklendi.",
-            "session_id": session_id,   # ← Frontend bunu saklamalı ve header'da göndermelidir
-            "summary": summary
+            "session_id": session_id,
+            "columns": original_columns, # Frontend bu listeyi eşleştirme için kullanacak
+            "message": "Dosya alındı, eşleştirme bekleniyor."
         }
-
     except Exception as e:
         logging.error(f"Upload hatası: {e}")
         return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/v1/session/apply-mapping")
+async def apply_mapping(body: ColumnMappingRequest, x_session_id: Optional[str] = Header(default=None)):
+    """
+    2. AŞAMA: Frontend'den gelen eşleştirmeyi uygular ve HRDataEngine'i başlatır.
+    """
+    if not x_session_id:
+        raise HTTPException(status_code=400, detail="Session ID bulunamadı.")
+
+    raw_file_path = SESSION_DATA_DIR / f"{x_session_id}_raw.csv"
+    if not Path(raw_file_path).exists():
+        raise HTTPException(status_code=404, detail="Ham veri bulunamadı. Lütfen tekrar yükleyin.")
+
+    try:
+        # Ham veriyi oku
+        df = pd.read_csv(raw_file_path)
+        
+        # Sütunları Frontend'den gelen eşleştirmeye göre değiştir
+        df.rename(columns=body.mapping, inplace=True)
+        
+        # İşlenmiş, temiz veriyi asıl session dosyası olarak kaydet
+        final_file_path = SESSION_DATA_DIR / f"{x_session_id}.csv"
+        df.to_csv(final_file_path, index=False)
+        
+        # Ve asıl Motoru çalıştır!
+        _session_engines[x_session_id] = HRDataEngine(str(final_file_path))
+        logging.info(f"Engine eşleştirmeyle başlatıldı: {x_session_id}")
+        
+        summary = _session_engines[x_session_id].get_risk_summary()
+
+        return {
+            "status": "success",
+            "message": "Veri eşleştirildi ve motor başlatıldı.",
+            "summary": summary
+        }
+    except Exception as e:
+        logging.error(f"Mapping hatası: {e}")
+        raise HTTPException(status_code=500, detail="Veri eşleştirilemedi veya motor başlatılamadı.")
 
 
 @app.post("/api/v1/analytics/kpi")
