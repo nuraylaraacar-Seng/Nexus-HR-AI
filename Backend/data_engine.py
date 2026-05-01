@@ -4,7 +4,6 @@ from pathlib import Path
 import logging
 from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
 
-
 class HRDataEngine:
     def __init__(self, file_path: str, column_mapping: dict = None):
         """
@@ -18,6 +17,7 @@ class HRDataEngine:
             (BASE_DIR / "Data" / "sessions").resolve(),
         ]
         resolved = Path(file_path).resolve()
+        
         if not any(str(resolved).startswith(str(b)) for b in allowed_bases):
             raise ValueError(f"Güvensiz dosya yolu! İzin verilenler: {[str(b) for b in allowed_bases]}")
 
@@ -30,23 +30,68 @@ class HRDataEngine:
         try:
             raw = pd.read_csv(self.file_path)
 
-            # Kolon yeniden adlandırma: { standart_ad: kullanici_ad } → ters çevir
+            # Kolon yeniden adlandırma
             if self.column_mapping:
                 rename_map = {v: k for k, v in self.column_mapping.items() if v and v in raw.columns}
                 raw = raw.rename(columns=rename_map)
 
-            # Zorunlu kolonlardan sadece mevcut olanlarla dropna yap
-            drop_cols = [c for c in ['Salary', 'PerformanceScore', 'EngagementSurvey'] if c in raw.columns]
-            self.df = raw.dropna(subset=drop_cols).copy() if drop_cols else raw.copy()
+            self.df = raw.copy()
 
+            # --- 1. VERİ TEMİZLEME ---
+            self.df.columns = self.df.columns.astype(str)
+
+            if 'Termd' in self.df.columns:
+                self.df['Termd'] = self.df['Termd'].astype(str).str.strip().str.lower()
+                self.df['Termd'] = self.df['Termd'].apply(lambda x: 1 if x in ['yes', '1', 'true', '1.0'] else 0)
+
+            if 'Department' in self.df.columns:
+                self.df['Department'] = self.df['Department'].astype(str)
+            
+            if 'Sex' in self.df.columns:
+                self.df['Sex'] = self.df['Sex'].astype(str).str.strip()
+
+
+            # --- 2. Akıllı Veri Doldurma ---
+            #eksik veriyi silmiyoruz , eksikleri  olarak dolduruyoruz.
+
+            if 'Salary' in self.df.columns:
+                # Sayısal olmayan bozuk maaş verilerini (örn: "Gizli") tespit edip NaN (boş) yap
+                self.df['Salary'] = pd.to_numeric(self.df['Salary'], errors='coerce')
+                
+                # Her departmanın kendi maaş ortalamasını hesapla ve o departmandaki boş maaşları bununla doldur
+                if 'Department' in self.df.columns:
+                    dept_means = self.df.groupby('Department')['Salary'].transform('mean')
+                    self.df['Salary'] = self.df['Salary'].fillna(dept_means)
+                
+                # Eğer hala boşluk kaldıysa (örneğin tüm departmanın maaşı gizliyse), şirketin genel ortalamasını hesapla
+                global_mean = self.df['Salary'].mean()
+                self.df['Salary'] = self.df['Salary'].fillna(global_mean if pd.notna(global_mean) else 0)
+                
+                # maaş algoritmasını logaritmesı alınır outlier'ı engelemek için
+                self.df['Log_Salary'] = np.log1p(self.df['Salary'])
+                
+            # Backend/data_engine.py içindeki load_and_clean_data fonksiyonuna ekle:
+            if 'Sex' in self.df.columns:
+                # 1. Önce temizle ve string yap
+                self.df['Sex'] = self.df['Sex'].astype(str).str.strip().str.title()
+        
+                # 2. Male -> M, Female -> F dönüşümünü yap 
+                #Veri Normalizasyonu
+                self.df['Sex'] = self.df['Sex'].replace({
+                    'Male': 'M',
+                    'Female': 'F',
+                    'Man': 'M',
+                    'Woman': 'F',
+                    'Boy': 'M',
+                    'Girl': 'F'
+                })
+
+            # Tarih formatını güvene al
             if 'DateofHire' in self.df.columns:
                 self.df['DateofHire'] = pd.to_datetime(self.df['DateofHire'], errors='coerce')
-            if 'Salary' in self.df.columns:
-                self.df['Log_Salary'] = np.log1p(self.df['Salary'])
-            if 'Sex' in self.df.columns:
-                self.df['Sex'] = self.df['Sex'].str.strip()
 
-            logging.info(f"Veri yüklendi: {self.file_path.name} | {len(self.df)} kayıt | Kolonlar: {list(self.df.columns)}")
+            logging.info(f"Veri ZEKİCE yüklendi: {self.file_path.name} | {len(self.df)} kayıt | Kolonlar: {list(self.df.columns)}")
+        
         except FileNotFoundError:
             logging.error(f"Dosya bulunamadı: {self.file_path}")
             self.df = pd.DataFrame()
@@ -70,7 +115,7 @@ class HRDataEngine:
 
         try:
             ops = {"mean": target[metric].mean, "sum": target[metric].sum,
-                   "max": target[metric].max, "count": target[metric].count}
+                "max": target[metric].max, "count": target[metric].count}
             val = ops[calc_type]()
             return {
                 "department": department, "metric": metric,
@@ -97,7 +142,7 @@ class HRDataEngine:
         else:
             result["average_engagement"] = 0
 
-        # Flight risk: mevcut kolonlara göre esnek hesapla
+        # Flight risk(istifa riski): mevcut kolonlara göre esnek hesapla
         mask = pd.Series([True] * len(self.df), index=self.df.index)
         if 'Salary' in self.df.columns:
             mask &= self.df['Salary'] < avg_salary
@@ -106,9 +151,24 @@ class HRDataEngine:
         if 'EngagementSurvey' in self.df.columns:
             mask &= self.df['EngagementSurvey'] < 3.5
 
+        
+        # Maskeyi ana veriye kalıcı kolon olarak ekle:
+        self.df['Is_Risk'] = mask.astype(int)
+        
         result["flight_risk_count"] = int(mask.sum())
-        return result
+        
+    
+        if len(self.df) > 0:
+            result["flight_risk_rate"] = round((result["flight_risk_count"] / len(self.df)) * 100, 1)
+        else:
+            result["flight_risk_rate"] = 0
 
+        return result
+    
+    
+    
+    
+    
     def get_correlation_matrix(self) -> dict:
         if self.df.empty:
             return {}
@@ -133,8 +193,9 @@ class HRDataEngine:
         df['Sex'] = df['Sex'].str.strip()
         pivot = df.pivot_table(values='Salary', index='Department', columns='Sex', aggfunc='mean').round(2).fillna(0)
         if 'M' in pivot.columns and 'F' in pivot.columns:
+            # 0'a bölme hatasını engellemek için replace kullanıyoruz
             pivot['Pay_Gap_Percentage'] = (
-                ((pivot['M'] - pivot['F']) / pivot['M'].replace(0, float('nan'))) * 100
+                ((pivot['M'] - pivot['F']) / pivot['M'].replace(0, np.nan)) * 100
             ).round(1).fillna(0)
         return pivot.to_dict(orient='index')
 
@@ -150,6 +211,7 @@ class HRDataEngine:
         if 'DateofHire' in local.columns:
             local['Hire_Year'] = pd.to_datetime(local['DateofHire'], errors='coerce').dt.year
             local['Tenure_Years'] = pd.Timestamp.now().year - local['Hire_Year']
+            local['Tenure_Years'] = local['Tenure_Years'].fillna(0)
         else:
             local['Tenure_Years'] = 999  # bilinmiyorsa koşulu geç
 
@@ -159,3 +221,4 @@ class HRDataEngine:
 
         cols = [c for c in ['Employee_Name', 'Department', 'Salary', 'ManagerName'] if c in local.columns]
         return local[mask][cols].to_dict(orient='records')
+    
