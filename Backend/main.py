@@ -22,6 +22,7 @@ from Backend.data_engine import HRDataEngine
 from Backend.ai_service import HRConsultantAI
 from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
 
+
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -42,7 +43,7 @@ SESSION_DATA_DIR  = BASE_DIR / "Data" / "sessions"
 SESSION_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 _session_engines: dict[str, HRDataEngine] = {}
-_pending_sessions: dict[str, dict]        = {}  # mapping bekleniyor
+_pending_sessions: dict[str, dict]        = {}
 
 ai_engine = HRConsultantAI()
 
@@ -61,8 +62,6 @@ def get_engine(sid: Optional[str]) -> HRDataEngine:
         _session_engines["default"] = HRDataEngine(str(DEFAULT_DATA_PATH))
     return _session_engines["default"]
 
-
-# ── İSTEK MODELLERİ ──────────────────────────────────────────────────────────
 
 class KPIRequest(BaseModel):
     department: str
@@ -85,19 +84,11 @@ class KPIRequest(BaseModel):
 
 
 class ColumnMappingRequest(BaseModel):
-    """{ "Salary": "maas_tl", "Department": "bolum", ... }"""
     mapping: dict[str, str]
 
 
-# ── ENDPOİNTLER ──────────────────────────────────────────────────────────────
-
 @app.post("/api/v1/upload-dataset")
 async def upload_dataset(file: UploadFile = File(...)):
-    """
-    Adım 1 — CSV yükle.
-    • Tüm zorunlu kolonlar varsa: direkt engine kur, session_id döndür.
-    • Eksik varsa: pending_id + dataset_columns döndür → frontend mapping UI açar.
-    """
     try:
         contents = await file.read()
         if not contents:
@@ -107,6 +98,7 @@ async def upload_dataset(file: UploadFile = File(...)):
         actual_cols = list(df.columns)
         temp_id     = str(uuid.uuid4())
         save_path   = SESSION_DATA_DIR / f"{temp_id}_raw.csv"
+        
         with open(save_path, "wb") as f:
             f.write(contents)
 
@@ -114,7 +106,6 @@ async def upload_dataset(file: UploadFile = File(...)):
         auto_mapping     = {c: c for c in ALL_STANDARD if c in actual_cols}
 
         if not missing_required:
-            # Doğrudan engine kur
             engine = HRDataEngine(str(save_path), column_mapping=auto_mapping)
             _session_engines[temp_id] = engine
             return {
@@ -124,7 +115,6 @@ async def upload_dataset(file: UploadFile = File(...)):
                 "summary": engine.get_risk_summary(),
             }
         else:
-            # Mapping bekle
             _pending_sessions[temp_id] = {"raw_path": str(save_path), "columns": actual_cols}
             return {
                 "status": "success",
@@ -142,7 +132,6 @@ async def upload_dataset(file: UploadFile = File(...)):
 
 @app.post("/api/v1/upload-dataset/confirm-mapping/{pending_id}")
 async def confirm_mapping(pending_id: str, body: ColumnMappingRequest):
-    """Adım 2 — Mapping onayla, engine kur, session_id döndür."""
     if pending_id not in _pending_sessions:
         raise HTTPException(status_code=404, detail="Geçersiz ya da süresi dolmuş pending session.")
 
@@ -212,20 +201,29 @@ async def get_flight_risk(request: Request,
                           x_session_id: Optional[str] = Header(default=None)):
     return {"status": "success", "data": get_engine(x_session_id).predict_flight_risk_advanced()}
 
-
 @app.get("/api/v1/ai/executive-summary")
 @limiter.limit("5/minute")
 async def get_ai_summary(request: Request,
                          x_session_id: Optional[str] = Header(default=None)):
+    # AI engine kontrolü
+    if ai_engine is None:
+        raise HTTPException(
+            status_code=503,
+            detail="AI servisi devre dışı. Llama_API_KEY .env dosyasında tanımlı mı kontrol et."
+        )
+ 
     engine    = get_engine(x_session_id)
     risk_data = engine.get_risk_summary()
     if not risk_data:
         raise HTTPException(status_code=500, detail="Risk verileri hesaplanamadı.")
+ 
+    # ★ ai_service artık "error" key döndürüyor, "status" değil
     ai_report = ai_engine.generate_executive_summary(risk_data)
+ 
     if "error" in ai_report:
         raise HTTPException(status_code=503, detail=ai_report["error"])
+ 
     return {"status": "success", "data": ai_report}
-
 
 @app.delete("/api/v1/session")
 async def delete_session(x_session_id: Optional[str] = Header(default=None)):
