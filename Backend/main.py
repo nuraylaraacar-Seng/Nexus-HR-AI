@@ -1,100 +1,68 @@
 """
-Nexus HR: Enterprise AI Dashboard API
-Session bazlı engine yönetimi ile her kullanıcı kendi dataset'ini yükler,
-kendi session'ına özel hesaplamalar alır.
+Nexus HR: Enterprise AI Dashboard API v2.1
+- Session bazlı engine yönetimi
+- Esnek kolon eşleştirme (column mapping)
 """
 
-import os
-import uuid
-import logging
+import os, uuid, logging
 from pathlib import Path
-from fastapi import FastAPI, HTTPException, Request, Header
+from typing import Optional
+from io import BytesIO
+
+import pandas as pd
+from fastapi import FastAPI, HTTPException, Request, Header, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from pydantic import BaseModel, field_validator
-from typing import Optional
+from dotenv import load_dotenv
 
 from Backend.data_engine import HRDataEngine
 from Backend.ai_service import HRConsultantAI
 from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
-from dotenv import load_dotenv
 
 load_dotenv()
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-from fastapi import UploadFile, File
-import pandas as pd
-from io import BytesIO
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
-)
-
-# --- RATE LİMİTER ---
 limiter = Limiter(key_func=get_remote_address)
-
-app = FastAPI(
-    title="Nexus HR: Enterprise AI Dashboard API",
-    description="İK Verileri için Yapay Zeka Destekli Analitik API",
-    version="2.0.0"
-)
-
+app = FastAPI(title="Nexus HR API", version="2.1.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# --- CORS ---
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
-
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    CORSMiddleware, allow_origins=allowed_origins,
+    allow_credentials=False, allow_methods=["*"], allow_headers=["*"],
 )
 
-# --- DIZIN YAPISI ---
-BASE_DIR = Path(__file__).parent.parent
+BASE_DIR          = Path(__file__).parent.parent
 DEFAULT_DATA_PATH = BASE_DIR / "Data" / "HRDataset_v14.csv"
-
-# Kullanıcı bazlı geçici dataset'lerin kaydedileceği klasör
-SESSION_DATA_DIR = BASE_DIR / "Data" / "sessions"
+SESSION_DATA_DIR  = BASE_DIR / "Data" / "sessions"
 SESSION_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-# --- SESSION DEPOSU ---
-# { session_id: HRDataEngine instance }
-# Production'da Redis/DB kullanılmalı; burada in-memory yeterli
 _session_engines: dict[str, HRDataEngine] = {}
+_pending_sessions: dict[str, dict]        = {}  # mapping bekleniyor
 
 ai_engine = HRConsultantAI()
 
+REQUIRED_COLUMNS = ["Salary", "Department", "Termd", "EngagementSurvey"]
+OPTIONAL_COLUMNS = ["PerformanceScore", "SpecialProjectsCount", "DateofHire",
+                    "Employee_Name", "ManagerName", "EmpSatisfaction", "Sex"]
+ALL_STANDARD = REQUIRED_COLUMNS + OPTIONAL_COLUMNS
 
-# --- YARDIMCI FONKSİYONLAR ---
 
-def get_engine_for_session(session_id: Optional[str]) -> HRDataEngine:
-    """
-    Verilen session_id için engine döndürür.
-    session_id yoksa ya da geçersizse varsayılan dataset'i kullanır.
-    """
-    if session_id and session_id in _session_engines:
-        return _session_engines[session_id]
-
-    # Varsayılan engine: ilk istekte oluşturulur, sonra cache'lenir
+def get_engine(sid: Optional[str]) -> HRDataEngine:
+    if sid and sid in _session_engines:
+        return _session_engines[sid]
     if "default" not in _session_engines:
         if not DEFAULT_DATA_PATH.exists():
-            raise HTTPException(
-                status_code=503,
-                detail="Varsayılan dataset bulunamadı. Lütfen önce bir dataset yükleyin."
-            )
+            raise HTTPException(status_code=503, detail="Varsayılan dataset bulunamadı.")
         _session_engines["default"] = HRDataEngine(str(DEFAULT_DATA_PATH))
-        logging.info("Varsayılan engine oluşturuldu.")
-
     return _session_engines["default"]
 
 
-# --- İSTEK MODELLERİ ---
+# ── İSTEK MODELLERİ ──────────────────────────────────────────────────────────
 
 class KPIRequest(BaseModel):
     department: str
@@ -103,102 +71,116 @@ class KPIRequest(BaseModel):
 
     @field_validator('metric')
     @classmethod
-    def metric_must_be_valid(cls, v):
+    def metric_ok(cls, v):
         if v not in ALLOWED_METRICS:
             raise ValueError(f"Geçersiz metrik. İzin verilenler: {ALLOWED_METRICS}")
         return v
 
     @field_validator('calc_type')
     @classmethod
-    def calc_type_must_be_valid(cls, v):
+    def calc_ok(cls, v):
         if v not in ALLOWED_CALC_TYPES:
             raise ValueError(f"Geçersiz hesaplama tipi. İzin verilenler: {ALLOWED_CALC_TYPES}")
         return v
 
 
-# --- ENDPOİNTLER ---
+class ColumnMappingRequest(BaseModel):
+    """{ "Salary": "maas_tl", "Department": "bolum", ... }"""
+    mapping: dict[str, str]
+
+
+# ── ENDPOİNTLER ──────────────────────────────────────────────────────────────
 
 @app.post("/api/v1/upload-dataset")
 async def upload_dataset(file: UploadFile = File(...)):
     """
-    1. AŞAMA: Dosyayı alır, geçici kaydeder ve kolon isimlerini UI'a döner.
+    Adım 1 — CSV yükle.
+    • Tüm zorunlu kolonlar varsa: direkt engine kur, session_id döndür.
+    • Eksik varsa: pending_id + dataset_columns döndür → frontend mapping UI açar.
     """
     try:
         contents = await file.read()
         if not contents:
             return {"status": "error", "message": "Boş dosya yüklenemez."}
 
-        # Sadece ilk 5 satırı oku ki kolon isimlerini alabilelim
-        df = pd.read_csv(BytesIO(contents), nrows=5)
-        original_columns = df.columns.tolist()
-
-        session_id = str(uuid.uuid4())
-        # Dosyayı "raw" (ham) olarak kaydediyoruz
-        save_path = SESSION_DATA_DIR / f"{session_id}_raw.csv"
-        
+        df = pd.read_csv(BytesIO(contents))
+        actual_cols = list(df.columns)
+        temp_id     = str(uuid.uuid4())
+        save_path   = SESSION_DATA_DIR / f"{temp_id}_raw.csv"
         with open(save_path, "wb") as f:
             f.write(contents)
 
-        return {
-            "status": "success",
-            "session_id": session_id,
-            "columns": original_columns, # Frontend bu listeyi eşleştirme için kullanacak
-            "message": "Dosya alındı, eşleştirme bekleniyor."
-        }
+        missing_required = [c for c in REQUIRED_COLUMNS if c not in actual_cols]
+        auto_mapping     = {c: c for c in ALL_STANDARD if c in actual_cols}
+
+        if not missing_required:
+            # Doğrudan engine kur
+            engine = HRDataEngine(str(save_path), column_mapping=auto_mapping)
+            _session_engines[temp_id] = engine
+            return {
+                "status": "success",
+                "needs_mapping": False,
+                "session_id": temp_id,
+                "summary": engine.get_risk_summary(),
+            }
+        else:
+            # Mapping bekle
+            _pending_sessions[temp_id] = {"raw_path": str(save_path), "columns": actual_cols}
+            return {
+                "status": "success",
+                "needs_mapping": True,
+                "pending_id": temp_id,
+                "dataset_columns": actual_cols,
+                "required_columns": REQUIRED_COLUMNS,
+                "optional_columns": OPTIONAL_COLUMNS,
+                "auto_detected": auto_mapping,
+            }
     except Exception as e:
         logging.error(f"Upload hatası: {e}")
         return {"status": "error", "message": str(e)}
 
 
-@app.post("/api/v1/session/apply-mapping")
-async def apply_mapping(body: ColumnMappingRequest, x_session_id: Optional[str] = Header(default=None)):
-    """
-    2. AŞAMA: Frontend'den gelen eşleştirmeyi uygular ve HRDataEngine'i başlatır.
-    """
-    if not x_session_id:
-        raise HTTPException(status_code=400, detail="Session ID bulunamadı.")
+@app.post("/api/v1/upload-dataset/confirm-mapping/{pending_id}")
+async def confirm_mapping(pending_id: str, body: ColumnMappingRequest):
+    """Adım 2 — Mapping onayla, engine kur, session_id döndür."""
+    if pending_id not in _pending_sessions:
+        raise HTTPException(status_code=404, detail="Geçersiz ya da süresi dolmuş pending session.")
 
-    raw_file_path = SESSION_DATA_DIR / f"{x_session_id}_raw.csv"
-    if not Path(raw_file_path).exists():
-        raise HTTPException(status_code=404, detail="Ham veri bulunamadı. Lütfen tekrar yükleyin.")
+    pending     = _pending_sessions[pending_id]
+    raw_path    = pending["raw_path"]
+    actual_cols = pending["columns"]
+
+    for std, user_col in body.mapping.items():
+        if user_col and user_col not in actual_cols:
+            raise HTTPException(status_code=400, detail=f"'{user_col}' kolonu CSV'de yok.")
+
+    for req in REQUIRED_COLUMNS:
+        if not body.mapping.get(req):
+            raise HTTPException(status_code=400, detail=f"Zorunlu kolon eşleştirilmedi: '{req}'")
 
     try:
-        # Ham veriyi oku
-        df = pd.read_csv(raw_file_path)
-        
-        # Sütunları Frontend'den gelen eşleştirmeye göre değiştir
-        df.rename(columns=body.mapping, inplace=True)
-        
-        # İşlenmiş, temiz veriyi asıl session dosyası olarak kaydet
-        final_file_path = SESSION_DATA_DIR / f"{x_session_id}.csv"
-        df.to_csv(final_file_path, index=False)
-        
-        # Ve asıl Motoru çalıştır!
-        _session_engines[x_session_id] = HRDataEngine(str(final_file_path))
-        logging.info(f"Engine eşleştirmeyle başlatıldı: {x_session_id}")
-        
-        summary = _session_engines[x_session_id].get_risk_summary()
+        session_id = str(uuid.uuid4())
+        engine     = HRDataEngine(raw_path, column_mapping=body.mapping)
+        _session_engines[session_id] = engine
+        del _pending_sessions[pending_id]
+
+        new_path = SESSION_DATA_DIR / f"{session_id}.csv"
+        Path(raw_path).rename(new_path)
 
         return {
             "status": "success",
-            "message": "Veri eşleştirildi ve motor başlatıldı.",
-            "summary": summary
+            "session_id": session_id,
+            "summary": engine.get_risk_summary(),
         }
     except Exception as e:
-        logging.error(f"Mapping hatası: {e}")
-        raise HTTPException(status_code=500, detail="Veri eşleştirilemedi veya motor başlatılamadı.")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/v1/analytics/kpi")
 @limiter.limit("30/minute")
-async def get_kpi(
-    request: Request,
-    body: KPIRequest,
-    x_session_id: Optional[str] = Header(default=None)
-):
-    """Dinamik KPI hesaplar. X-Session-ID header'ı ile session'a özel veri kullanır."""
-    engine = get_engine_for_session(x_session_id)
-    result = engine.calculate_dynamic_kpi(body.department, body.metric, body.calc_type)
+async def get_kpi(request: Request, body: KPIRequest,
+                  x_session_id: Optional[str] = Header(default=None)):
+    result = get_engine(x_session_id).calculate_dynamic_kpi(body.department, body.metric, body.calc_type)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return {"status": "success", "data": result}
@@ -206,13 +188,9 @@ async def get_kpi(
 
 @app.get("/api/v1/analytics/correlation")
 @limiter.limit("20/minute")
-async def get_correlation(
-    request: Request,
-    x_session_id: Optional[str] = Header(default=None)
-):
-    """Değişkenler arasındaki korelasyon matrisini döndürür."""
-    engine = get_engine_for_session(x_session_id)
-    data = engine.get_correlation_matrix()
+async def get_correlation(request: Request,
+                          x_session_id: Optional[str] = Header(default=None)):
+    data = get_engine(x_session_id).get_correlation_matrix()
     if not data:
         raise HTTPException(status_code=500, detail="Korelasyon hesaplanamadı.")
     return {"status": "success", "data": data}
@@ -220,13 +198,9 @@ async def get_correlation(
 
 @app.get("/api/v1/analytics/gender-pay-gap")
 @limiter.limit("20/minute")
-async def get_gender_pay_gap(
-    request: Request,
-    x_session_id: Optional[str] = Header(default=None)
-):
-    """Cinsiyet bazlı maaş uçurumu analizi."""
-    engine = get_engine_for_session(x_session_id)
-    data = engine.analyze_gender_pay_gap()
+async def get_gender_pay_gap(request: Request,
+                             x_session_id: Optional[str] = Header(default=None)):
+    data = get_engine(x_session_id).analyze_gender_pay_gap()
     if not data:
         raise HTTPException(status_code=500, detail="Cinsiyet maaş analizi hesaplanamadı.")
     return {"status": "success", "data": data}
@@ -234,85 +208,41 @@ async def get_gender_pay_gap(
 
 @app.get("/api/v1/analytics/flight-risk")
 @limiter.limit("20/minute")
-async def get_flight_risk(
-    request: Request,
-    x_session_id: Optional[str] = Header(default=None)
-):
-    """Algoritmik istifa riski listesini döndürür."""
-    engine = get_engine_for_session(x_session_id)
-    return {"status": "success", "data": engine.predict_flight_risk_advanced()}
+async def get_flight_risk(request: Request,
+                          x_session_id: Optional[str] = Header(default=None)):
+    return {"status": "success", "data": get_engine(x_session_id).predict_flight_risk_advanced()}
 
 
 @app.get("/api/v1/ai/executive-summary")
 @limiter.limit("5/minute")
-async def get_ai_summary(
-    request: Request,
-    x_session_id: Optional[str] = Header(default=None)
-):
-    """Yapay Zeka (Groq/Llama) Stratejik Yönetici Özeti — session'a özel veri ile."""
-    engine = get_engine_for_session(x_session_id)
+async def get_ai_summary(request: Request,
+                         x_session_id: Optional[str] = Header(default=None)):
+    engine    = get_engine(x_session_id)
     risk_data = engine.get_risk_summary()
     if not risk_data:
         raise HTTPException(status_code=500, detail="Risk verileri hesaplanamadı.")
-
     ai_report = ai_engine.generate_executive_summary(risk_data)
     if "error" in ai_report:
         raise HTTPException(status_code=503, detail=ai_report["error"])
-
     return {"status": "success", "data": ai_report}
-
-
-@app.get("/api/v1/session/info")
-async def get_session_info(x_session_id: Optional[str] = Header(default=None)):
-    """
-    Aktif session bilgisini döndürür.
-    Frontend'in hangi dataset ile çalıştığını doğrulaması için kullanılır.
-    """
-    if x_session_id and x_session_id in _session_engines:
-        engine = _session_engines[x_session_id]
-        return {
-            "status": "success",
-            "session_id": x_session_id,
-            "is_custom": True,
-            "employee_count": len(engine.df)
-        }
-    return {
-        "status": "success",
-        "session_id": None,
-        "is_custom": False,
-        "note": "Varsayılan dataset kullanılıyor."
-    }
 
 
 @app.delete("/api/v1/session")
 async def delete_session(x_session_id: Optional[str] = Header(default=None)):
-    """
-    Session'ı ve ilgili geçici dosyayı temizler.
-    Kullanıcı logout yaptığında çağrılmalıdır.
-    """
     if not x_session_id or x_session_id not in _session_engines:
-        return {"status": "error", "message": "Geçerli bir session bulunamadı."}
-
-    # Engine'i bellekten sil
+        return {"status": "error", "message": "Geçerli session bulunamadı."}
     del _session_engines[x_session_id]
-
-    # Diske yazılan geçici dosyayı sil
-    session_file = SESSION_DATA_DIR / f"{x_session_id}.csv"
-    if session_file.exists():
-        session_file.unlink()
-        logging.info(f"Session temizlendi: {x_session_id}")
-
-    return {"status": "success", "message": "Session başarıyla silindi."}
+    for ext in [".csv", "_raw.csv"]:
+        p = SESSION_DATA_DIR / f"{x_session_id}{ext}"
+        if p.exists():
+            p.unlink()
+    return {"status": "success", "message": "Session silindi."}
 
 
 @app.get("/api/v1/health")
-async def health_check():
-    """
-    API sağlık durumu.
-    Kubernetes/Docker liveness probe için kullanılır.
-    """
+async def health():
     return {
         "status": "healthy",
         "active_sessions": len([k for k in _session_engines if k != "default"]),
-        "default_dataset_loaded": "default" in _session_engines
+        "pending_mappings": len(_pending_sessions),
     }
