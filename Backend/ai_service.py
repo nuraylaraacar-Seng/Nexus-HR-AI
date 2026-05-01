@@ -1,89 +1,95 @@
 import os
 import requests
 
+
 class HRConsultantAI:
     def __init__(self):
-        self.api_key = os.getenv("Llama_API_KEY")
-        self.url = "https://api.groq.com/openai/v1/chat/completions"
-        self.model = "llama-3.3-70b-versatile"
-
-
+        self.api_key = os.getenv("Llama_API_KEY")  # .env'deki key adı korundu
+        self.url     = "https://api.groq.com/openai/v1/chat/completions"
+        self.model   = "llama-3.3-70b-versatile"
 
         if not self.api_key:
-            raise ValueError("Nexus_API_KEY environment variable is missing!")
+            raise ValueError("Llama_API_KEY environment variable eksik! .env dosyanı kontrol et.")
 
-    def generate_executive_summary(self, risk_data: dict):
+    def generate_executive_summary(self, risk_data: dict) -> dict:
+        """
+        Groq / Llama-3.3 ile stratejik İK raporu üretir.
+        Dönen dict her zaman 'error' key'i içerir (hata varsa) ya da
+        'report_title' + 'ai_insight' içerir (başarılı ise).
+        main.py "error" in result ile kontrol eder.
+        """
         prompt = f"""
-You are an elite HR analytics strategist with a communication style comparable to McKinsey, BCG, and Bain partners.
-Using the HR metrics provided, produce a high-authority, insight-dense, CEO-level executive summary **in Turkish**.
+[ROLE]
+You are a Senior Managing Partner at a top-tier global management consultancy (McKinsey, BCG, or Bain).
+Your expertise lies in Strategic Human Capital Management and Organizational Resilience.
 
-Your writing must be sharp, assertive, and strategically oriented — the kind of output that would convince a CHRO or CEO
-that the author is a top-tier HR data strategist.
+[CONTEXT]
+You are reviewing the "Nexus HR" analytics dashboard for a high-growth enterprise.
+The CHRO and Board of Directors expect a high-stakes, data-driven assessment.
 
-Your output MUST follow this exact structure (titles remain in Turkish), but the content must be powerful, analytical,
-and business-impact focused:
+[DATASET SNAPSHOT]
+- Total Headcount: {risk_data.get('total_employees', 'N/A')}
+- Financial Baseline (Avg Salary): ${risk_data.get('average_salary', 'N/A')}
+- Talent Leakage Risk: {risk_data.get('flight_risk_count', 'Analiz Edilemedi')} employees identified as High Risk.
+- Employee Sentiment: {risk_data.get('average_engagement', 'N/A')}/5.0 Engagement Score.
 
-1. Genel Durum Özeti
-   - Deliver a commanding, high-level assessment of the organization’s HR landscape in 2–3 sentences.
-   - The tone must be confident, outcome-focused, and reflective of senior strategic thinking.
+[STRICT DELIVERABLE STRUCTURE - RESPONSE MUST BE IN TURKISH]
 
-2. Kritik Bulgular
-   - Toplam çalışan: {risk_data.get('total_employees')}
-   - Ortalama maaş: {risk_data.get('average_salary') or "Veri mevcut değil"}
-   - Yüksek riskli çalışan sayısı: {risk_data.get('flight_risk_count') or "Veri mevcut değil"}
-   - Ortalama bağlılık skoru: {risk_data.get('average_engagement') or "Veri mevcut değil"}
+1. Stratejik Durum Değerlendirmesi
+   - Organizasyon sağlığını 2-3 güçlü cümleyle özetle.
+   - Bağlılık skorunu yetenek kaybı riskiyle doğrudan ilişkilendir.
 
-3. Stratejik Değerlendirme
-   - Provide sharp, insight-driven commentary on what these metrics imply for organizational health, workforce stability,
-     talent risk, and HR strategy.
-   - Even if some metrics are missing, maintain a strong analytical tone and extract meaningful strategic implications.
-   - Avoid generic HR statements; focus on business impact, risk exposure, operational vulnerabilities, and strategic priorities.
+2. Kritik Veri Matrisi
+   - Veriyi analitik ağırlıkla sun.
 
-4. Önerilen Aksiyonlar
-   - Provide 3–5 short, high-impact, C-level recommendations.
-   - Use decisive, executive language such as:
-     “kritik öncelik taşımaktadır”,
-     “stratejik olarak ele alınması gerekmektedir”,
-     “organizasyonel riskleri azaltmak için öncelikli olarak uygulanmalıdır”.
-   - Recommendations must be actionable, measurable, and aligned with enterprise-level decision making.
+3. Derinlemesine Risk Analizi
+   - Yüksek riskli çalışan kaybının finansal etkisini hesapla.
+   - Hangi departmanların "Stratejik Kırmızı Bölge" teşkil ettiğini belirt.
 
-STRICT RULES:
-- Output MUST be in Turkish.
-- Do NOT fabricate or assume numbers.
-- Tone MUST be authoritative, corporate, and insight-driven.
-- No soft language. No filler. No generic HR advice.
-- Follow the structure exactly.
+4. C-Level Aksiyon Planı
+   - 3-4 kararlı, yüksek etkili öneri sun.
+   - "Kritik öncelik taşımaktadır", "ivedilikle uygulanmalıdır" gibi ifadeler kullan.
+
+[CONSTRAINTS]
+- Dil: YALNIZCA TÜRKÇE.
+- Ton: Soğuk, profesyonel, veri merkezli, otoriter. Gereksiz dolgu yok.
 """
-
-
 
         payload = {
             "model": self.model,
             "messages": [
-                {"role": "system", "content": "You are a senior HR analytics consultant."},
+                {
+                    "role": "system",
+                    "content": "You are a top-tier HR Data Strategist. Turkish only. No fluff."
+                },
                 {"role": "user", "content": prompt}
             ],
-            "temperature": 0.4
+            "temperature": 0.3,
+            "max_tokens": 1500,
         }
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
-        response = requests.post(self.url, json=payload, headers=headers, timeout=60)
+        try:
+            response = requests.post(self.url, json=payload, headers=headers, timeout=60)
 
-        if response.status_code != 200:
+            if response.status_code != 200:
+                return {
+                    "error": f"Groq API Hatası {response.status_code}: {response.text[:300]}"
+                }
+
+            data     = response.json()
+            ai_text  = data["choices"][0]["message"]["content"]
+
             return {
-                "status": "error",
-                "detail": response.text
+                "report_title": "Nexus AI — Stratejik Yönetici Raporu",
+                "ai_insight":   ai_text,
             }
 
-        data = response.json()
-        ai_text = data["choices"][0]["message"]["content"]
-
-        return {
-            "status": "success",
-            "report_title": "AI Stratejik Yönetici Özeti",
-            "ai_insight": ai_text
-        }
+        except requests.exceptions.Timeout:
+            return {"error": "Groq API zaman aşımına uğradı (60s). Tekrar dene."}
+        except Exception as e:
+            return {"error": f"AI servis hatası: {str(e)}"}
