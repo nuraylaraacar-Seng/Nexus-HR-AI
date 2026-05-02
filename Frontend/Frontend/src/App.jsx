@@ -70,7 +70,7 @@ function MappingModal({ pendingId, datasetColumns, autoDetected, onSuccess, onCa
         <div style={ms.head}>
           <div>
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>🔗 Kolon Eşleştirme</h2>
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#94a3b8' }}>
+            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#64748b' }}>
               CSV kolonlarını sistem alanlarıyla eşleştir.{' '}
               <span style={{ color: '#ef4444' }}>*</span> zorunlu.
             </p>
@@ -88,24 +88,23 @@ function MappingModal({ pendingId, datasetColumns, autoDetected, onSuccess, onCa
               <div key={std}
                 style={{
                   ...ms.row,
-                  borderColor: ok ? 'rgba(16, 185, 129, 0.4)' : isReq ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255,255,255,0.05)',
-                  background:  ok ? 'rgba(16, 185, 129, 0.1)' : isReq ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
+                  borderColor: ok ? '#10b981' : isReq ? '#fca5a5' : '#e2e8f0',
+                  background:  ok ? '#f0fdf4' : isReq ? '#fff5f5' : '#f8fafc',
                 }}
               >
                 <div style={ms.leftCol}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>
                     {COL_LABELS[std]}
                     {isReq && <span style={{ color: '#ef4444' }}> *</span>}
                   </span>
-                  <code style={{ fontSize: 10, color: '#64748b' }}>{std}</code>
+                  <code style={{ fontSize: 10, color: '#94a3b8' }}>{std}</code>
                 </div>
-                <ArrowRight size={13} color="#64748b" style={{ flexShrink: 0 }} />
+                <ArrowRight size={13} color="#94a3b8" style={{ flexShrink: 0 }} />
                 <select
                   style={{
                     ...ms.select,
-                    borderColor: ok ? '#10b981' : 'rgba(255,255,255,0.1)',
-                    color: val ? '#fff' : '#94a3b8',
-                    background: 'rgba(15, 23, 42, 0.8)',
+                    borderColor: ok ? '#10b981' : '#cbd5e1',
+                    background: ok ? '#f0fdf4' : '#fff',
                   }}
                   value={val}
                   onChange={e => setMapping(p => ({ ...p, [std]: e.target.value }))}
@@ -170,9 +169,11 @@ const fetchAll = async (sid) => {
       axios.get(`${API_BASE}/analytics/gender-pay-gap`, { headers: h }),
     ]);
 
+    // Backend'den gelen objenin içindeki 'data' kısmını güvenli alalım
     setKpiData(kpiRes.data.data || kpiRes.data); 
     setRiskList(riskRes.data.data || riskRes.data || []);
     
+    // Pay Gap verisi boş gelirse grafiğin çökmemesi için:
     const gapRaw = gapRes.data.data || gapRes.data || {};
     setPayGap(
       Object.entries(gapRaw).map(([dept, v]) => ({
@@ -234,7 +235,7 @@ useEffect(() => {
     setSummary(newSummary);
     setUploadFile(null);
     setMappingData(null);
-    fetchAll(newSid); 
+    fetchAll(newSid); // state güncellenmesini beklemeden direkt geç
   };
 
   const handleLogout = async () => {
@@ -256,9 +257,8 @@ useEffect(() => {
     setAiLoading(false);
   };
 
-  // KALKAN 1: Çökmeyi önleyen güvenli okumalar
-  const totalEmp = summary?.total_employees ?? 0;
-  const riskRate = totalEmp > 0 ? `${(((riskList?.length || 0) / totalEmp) * 100).toFixed(1)}%` : '—';
+  const totalEmp = kpiData?.total_employees ?? 0;
+  const riskRate = totalEmp > 0 ? `${((riskList.length / totalEmp) * 100).toFixed(1)}%` : '—';
 
   return (
     <div style={s.page}>
@@ -304,8 +304,8 @@ useEffect(() => {
                onChange={e => handleFileSelect(e.target.files[0])} />
         {!uploadFile ? (
           <div style={{ textAlign: 'center' }}>
-            <Upload size={26} style={{ color: '#38bdf8', marginBottom: 8 }} />
-            <p style={s.dzLabel}>CSV dosyanı sürükle bırak ya da <u style={{color:'#38bdf8'}}>seç</u></p>
+            <Upload size={26} style={{ color: '#94a3b8', marginBottom: 8 }} />
+            <p style={s.dzLabel}>CSV dosyanı sürükle bırak ya da <u>seç</u></p>
           </div>
         ) : (
           <div style={s.filePrev}>
@@ -328,30 +328,30 @@ useEffect(() => {
 
       {summary && (
         <div style={s.strip}>
-          <CheckCircle size={14} color="#34d399" />
+          <CheckCircle size={14} color="#16a34a" />
           <span>Dataset aktif</span>
           <span style={s.sep}>·</span>
-          <span><b style={{color:'#f8fafc'}}>{summary.total_employees?.toLocaleString()}</b> çalışan</span>
+          <span><b>{summary.total_employees?.toLocaleString()}</b> çalışan</span>
           <span style={s.sep}>·</span>
-          <span>Ort. maaş <b style={{color:'#f8fafc'}}>${summary.average_salary?.toLocaleString()}</b></span>
+          <span>Ort. maaş <b>${summary.average_salary?.toLocaleString()}</b></span>
           <span style={s.sep}>·</span>
-          <span>Risk <b style={{color:'#ef4444'}}>{summary.flight_risk_count}</b> kişi</span>
+          <span>Risk <b>{summary.flight_risk_count}</b> kişi</span>
           <span style={s.sep}>·</span>
-          <span>Bağlılık <b style={{color:'#f8fafc'}}>{summary.average_engagement}</b></span>
+          <span>Bağlılık <b>{summary.average_engagement}</b></span>
         </div>
       )}
 
-      {/* KPI KARTLARI (Kalkanlar eklendi) */}
+      {/* KPI KARTLARI */}
       <div style={s.kpiRow}>
         {[
-          { icon: <Users size={20} />,        label: 'Toplam çalışan', value: loading ? '…' : (totalEmp ? totalEmp.toLocaleString() : '—'), acc: '#38bdf8' },
-          { icon: <DollarSign size={20} />,    label: 'Ort. maaş',     value: loading ? '…' : (kpiData?.value ? `$${kpiData.value.toLocaleString()}` : '—'), acc: '#10b981' },
-          { icon: <AlertTriangle size={20} />, label: 'İstifa riski',  value: loading ? '…' : `${riskList?.length || 0} kişi`, acc: '#f97316' },
+          { icon: <Users size={20} />,        label: 'Toplam çalışan', value: loading ? '…' : (totalEmp ? totalEmp.toLocaleString() : '—'), acc: '#3b82f6' },
+          { icon: <DollarSign size={20} />,    label: 'Ort. maaş',     value: loading ? '…' : (kpiData ? `$${kpiData.value.toLocaleString()}` : '—'), acc: '#10b981' },
+          { icon: <AlertTriangle size={20} />, label: 'İstifa riski',  value: loading ? '…' : `${riskList.length} kişi`, acc: '#f59e0b' },
           { icon: <Activity size={20} />,      label: 'Risk oranı',    value: loading ? '…' : riskRate, acc: '#ef4444' },
-          { icon: <Database size={20} />,      label: 'Departman',     value: loading ? '…' : (payGap?.length || '—'), acc: '#8b5cf6' },
+          { icon: <Database size={20} />,      label: 'Departman',     value: loading ? '…' : (payGap.length || '—'), acc: '#8b5cf6' },
         ].map((k, i) => (
-          <div key={i} style={{ ...s.kpiCard, borderTop: `2px solid ${k.acc}` }}>
-            <div style={{ color: k.acc, filter: `drop-shadow(0 0 8px ${k.acc}80)` }}>{k.icon}</div>
+          <div key={i} style={{ ...s.kpiCard, borderTop: `3px solid ${k.acc}` }}>
+            <div style={{ color: k.acc }}>{k.icon}</div>
             <div>
               <p style={s.kpiLabel}>{k.label}</p>
               <p style={s.kpiValue}>{k.value}</p>
@@ -365,15 +365,15 @@ useEffect(() => {
         <div style={s.panel}>
           <h2 style={s.panelTitle}>Cinsiyet Maaş Uçurumu (%)</h2>
           {loading && <p style={s.muted}>Yükleniyor…</p>}
-          {!loading && (!payGap || payGap.length === 0) && <p style={s.muted}>Veri bulunamadı.</p>}
-          {payGap?.length > 0 && (
+          {!loading && payGap.length === 0 && <p style={s.muted}>Veri bulunamadı.</p>}
+          {payGap.length > 0 && (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={payGap} margin={{ top: 8, right: 8, left: -18, bottom: 48 }}>
-                <XAxis dataKey="department" tick={{ fontSize: 11, fill: '#94a3b8' }} angle={-35} textAnchor="end" interval={0} />
-                <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} />
+                <XAxis dataKey="department" tick={{ fontSize: 11 }} angle={-35} textAnchor="end" interval={0} />
+                <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
                   formatter={v => [`${v}%`, 'Pay Gap']}
-                  contentStyle={{ borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(15, 23, 42, 0.9)', color: '#f8fafc' }}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 16px rgba(0,0,0,.1)' }}
                 />
                 <Bar dataKey="gap" radius={[5, 5, 0, 0]}>
                   {payGap.map((e, i) => <Cell key={i} fill={e.gap > 0 ? '#ef4444' : '#10b981'} />)}
@@ -391,17 +391,15 @@ useEffect(() => {
           <h2 style={s.panelTitle}>İstifa Riski Yüksek Çalışanlar</h2>
           <div style={s.riskList}>
             {loading && <p style={s.muted}>Yükleniyor…</p>}
-            {!loading && (!riskList || riskList.length === 0) && <p style={s.muted}>Risk taşıyan çalışan bulunamadı.</p>}
-            
-            {/* KALKAN 2: Array.isArray kontrolü */}
-            {Array.isArray(riskList) && riskList.map((emp, i) => (
+            {!loading && riskList.length === 0 && <p style={s.muted}>Risk taşıyan çalışan bulunamadı.</p>}
+            {riskList.map((emp, i) => (
               <div key={i} style={s.riskItem}>
                 <div style={s.avatar}>{(emp.Employee_Name || '?')[0]}</div>
                 <div style={s.riskInfo}>
-                  <strong style={{ fontSize: 13, color: '#f8fafc' }}>{emp.Employee_Name ?? '—'}</strong>
+                  <strong style={{ fontSize: 13 }}>{emp.Employee_Name ?? '—'}</strong>
                   <span style={s.riskDept}>{emp.Department}</span>
                 </div>
-                <span style={s.riskSal}>${emp.Salary?.toLocaleString() ?? '—'}</span>
+                <span style={s.riskSal}>${emp.Salary?.toLocaleString()}</span>
               </div>
             ))}
           </div>
@@ -411,15 +409,13 @@ useEffect(() => {
       {/* AI */}
       <div style={s.aiPanel}>
         <div style={s.aiHeader}>
-          <div style={{ filter: 'drop-shadow(0 0 10px rgba(99,102,241,0.8))' }}>
-             <BrainCircuit size={32} color="#818cf8" />
-          </div>
+          <BrainCircuit size={26} color="#6366f1" />
           <div>
             <h2 style={s.aiTitle}>Yapay Zeka Strateji Merkezi</h2>
           </div>
         </div>
         <button style={s.aiBtn} onClick={fetchAI} disabled={aiLoading}>
-          {aiLoading ? '⏳ AI Analiz Ediyor...' : '🚀 Stratejik Özet Üret'}
+          {aiLoading ? '⏳ Analiz ediliyor…' : '🚀 Stratejik Özet Üret'}
         </button>
         {error && <div style={s.errBox}>{error}</div>}
         {aiReport && (
@@ -433,74 +429,67 @@ useEffect(() => {
   );
 }
 
-// ─── STİLLER (CYBERPUNK / FANTASTİK DARK VERSİYON) ──────────────────────────
+// ─── STİLLER ────────────────────────────────────────────────────────────────
 const s = {
-  page:      { padding: '24px 3%', fontFamily: "'Inter', sans-serif", background: 'radial-gradient(circle at 50% 0%, #1e1b4b, #020617)', minHeight: '100vh', width: '100%', boxSizing: 'border-box', color: '#e2e8f0' },
+  // page sınırlarını kaldırdık (maxWidth ve margin sildik, w-full yaptık)
+  page:      { padding: '24px 3%', fontFamily: "'Segoe UI',sans-serif", background: '#f1f5f9', minHeight: '100vh', width: '100%', boxSizing: 'border-box' },
   topbar:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  tbLeft:    { display: 'flex', alignItems: 'center', gap: 14 },
-  titleGradient: { fontSize: 28, fontWeight: 900, margin: 0, background: 'linear-gradient(to right, #00f2fe, #4facfe, #00f2fe)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', textShadow: '0 0 20px rgba(0, 242, 254, 0.4)' },
-  
-  badge:     { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 700, letterSpacing: '0.5px' },
-  badgeCustom:  { background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.5)', boxShadow: '0 0 15px rgba(16, 185, 129, 0.2)' },
-  badgeDefault: { background: 'rgba(255, 255, 255, 0.05)', color: '#94a3b8', border: '1px solid rgba(255, 255, 255, 0.1)' },
-  logoutBtn: { background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', padding: '0 0 0 6px', display: 'flex', alignItems: 'center', filter: 'drop-shadow(0 0 5px rgba(239,68,68,0.5))' },
-  
-  dropzone:  { border: '2px dashed rgba(56, 188, 248, 0.4)', borderRadius: 16, padding: '32px 20px', textAlign: 'center', cursor: 'pointer', background: 'rgba(15, 23, 42, 0.6)', transition: 'all .3s ease-in-out', marginBottom: 12, backdropFilter: 'blur(10px)' },
-  dzOver:    { borderColor: '#38bdf8', background: 'rgba(56, 188, 248, 0.1)', transform: 'scale(1.02)', boxShadow: '0 0 30px rgba(56, 188, 248, 0.2)' },
-  dzHasFile: { borderStyle: 'solid', borderColor: '#10b981', background: 'rgba(16, 185, 129, 0.05)', cursor: 'default', boxShadow: '0 0 20px rgba(16, 185, 129, 0.1)' },
-  dzLabel:   { fontSize: 15, fontWeight: 600, color: '#e2e8f0', margin: 0 },
+  tbLeft:    { display: 'flex', alignItems: 'center', gap: 12 },
+  // Yeni Renk Geçişli Başlık Stili
+  titleGradient: { fontSize: 26, fontWeight: 800, margin: 0, background: 'linear-gradient(to right, #4f46e5, #db2777)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' },
+  badge:     { display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600 },
+  badgeCustom:  { background: '#dcfce7', color: '#166534' },
+  badgeDefault: { background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' },
+  logoutBtn: { background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0 0 0 4px', display: 'flex', alignItems: 'center' },
+  dropzone:  { border: '2px dashed #cbd5e1', borderRadius: 14, padding: '32px 20px', textAlign: 'center', cursor: 'pointer', background: '#fff', transition: 'all .2s', marginBottom: 12 },
+  dzOver:    { borderColor: '#3b82f6', background: '#eff6ff' },
+  dzHasFile: { borderStyle: 'solid', borderColor: '#10b981', background: '#f0fdf4', cursor: 'default' },
+  dzLabel:   { fontSize: 15, fontWeight: 500, color: '#334155', margin: 0 },
   filePrev:  { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, flexWrap: 'wrap' },
-  fileName:  { fontSize: 14, fontWeight: 700, color: '#38bdf8' },
-  fileSize:  { fontSize: 11, color: '#64748b', fontFamily: 'monospace' },
-  removeBtn: { background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', padding: '4px 8px', borderRadius: 6 },
-  
-  uploadBtn: { padding: '14px 24px', background: 'linear-gradient(90deg, #0f172a, #1e1b4b)', color: '#38bdf8', border: '1px solid rgba(56, 188, 248, 0.4)', borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', marginBottom: 16, display: 'block', width: '100%', textTransform: 'uppercase', letterSpacing: '1px', boxShadow: '0 0 20px rgba(56, 188, 248, 0.15)' },
-  uploadErr: { color: '#f87171', fontSize: 13, marginBottom: 10, fontWeight: 600, textShadow: '0 0 10px rgba(248,113,113,0.5)' },
-  
-  strip:     { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 20px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: 12, fontSize: 14, color: '#34d399', marginBottom: 20, boxShadow: '0 0 20px rgba(16, 185, 129, 0.1)' },
-  sep:       { color: '#059669' },
-  kpiRow:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 20, marginBottom: 28 },
-  
-  kpiCard:   { background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(16px)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.05)', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.5)' },
-  kpiLabel:  { fontSize: 12, color: '#94a3b8', margin: '0 0 6px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' },
-  kpiValue:  { fontSize: 28, fontWeight: 900, color: '#f8fafc', margin: 0, fontFamily: 'monospace' },
-  twoCol:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(350px,1fr))', gap: 24, marginBottom: 28 },
-  
-  panel:     { background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(16px)', borderRadius: 18, border: '1px solid rgba(255,255,255,0.05)', padding: 26, boxShadow: '0 15px 40px rgba(0,0,0,0.4)' },
-  panelTitle:{ fontSize: 16, fontWeight: 800, color: '#e2e8f0', margin: '0 0 20px', letterSpacing: '0.5px', textTransform: 'uppercase' },
-  hint:      { fontSize: 12, color: '#64748b', marginTop: 12, fontWeight: 600 },
-  muted:     { fontSize: 14, color: '#475569', padding: '24px 0', textAlign: 'center' },
-  riskList:  { display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 280, overflowY: 'auto', paddingRight: 6 },
-  
-  riskItem:  { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: 12, borderLeft: '4px solid #f97316', border: '1px solid rgba(249, 115, 22, 0.1)' },
-  avatar:    { width: 38, height: 38, borderRadius: '50%', background: 'rgba(249, 115, 22, 0.1)', color: '#fb923c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 15, flexShrink: 0, border: '1px solid rgba(249, 115, 22, 0.3)', textShadow: '0 0 10px rgba(249,115,22,0.5)' },
+  fileName:  { fontSize: 14, fontWeight: 600 },
+  fileSize:  { fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' },
+  removeBtn: { background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', padding: '2px 6px', borderRadius: 6 },
+  uploadBtn: { padding: '12px 24px', background: '#0f172a', color: '#f8fafc', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginBottom: 16, display: 'block', width: '100%' },
+  uploadErr: { color: '#ef4444', fontSize: 13, marginBottom: 10, fontWeight: 500 },
+  strip:     { display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 20px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, fontSize: 14, color: '#166534', marginBottom: 20 },
+  sep:       { color: '#86efac' },
+  kpiRow:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 16, marginBottom: 24 },
+  kpiCard:   { background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' },
+  kpiLabel:  { fontSize: 13, color: '#64748b', margin: '0 0 4px', fontWeight: 500 },
+  kpiValue:  { fontSize: 24, fontWeight: 700, color: '#0f172a', margin: 0, fontFamily: 'monospace' },
+  twoCol:    { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(350px,1fr))', gap: 20, marginBottom: 24 },
+  panel:     { background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.02)' },
+  panelTitle:{ fontSize: 16, fontWeight: 600, color: '#0f172a', margin: '0 0 16px' },
+  hint:      { fontSize: 12, color: '#94a3b8', marginTop: 12, fontWeight: 500 },
+  muted:     { fontSize: 14, color: '#94a3b8', padding: '24px 0', textAlign: 'center' },
+  riskList:  { display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 280, overflowY: 'auto', paddingRight: 4 },
+  riskItem:  { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: '#fff7ed', borderRadius: 12, borderLeft: '4px solid #f59e0b' },
+  avatar:    { width: 36, height: 36, borderRadius: '50%', background: '#fef3c7', color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, flexShrink: 0 },
   riskInfo:  { flex: 1, display: 'flex', flexDirection: 'column' },
   riskDept:  { fontSize: 12, color: '#94a3b8', marginTop: 2 },
-  riskSal:   { fontFamily: 'monospace', fontSize: 15, color: '#10b981', fontWeight: 800, textShadow: '0 0 10px rgba(16,185,129,0.4)' },
-  
-  aiPanel:   { background: 'rgba(30, 27, 75, 0.4)', backdropFilter: 'blur(20px)', borderRadius: 20, border: '1px solid rgba(99, 102, 241, 0.2)', padding: 32, boxShadow: '0 0 40px rgba(99, 102, 241, 0.1)' },
-  aiHeader:  { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 },
-  aiTitle:   { fontSize: 22, fontWeight: 900, color: '#c7d2fe', margin: 0, letterSpacing: '1px', textShadow: '0 0 15px rgba(199, 210, 254, 0.3)' },
-  
-  aiBtn:     { padding: '16px 36px', background: 'linear-gradient(90deg, #4f46e5 0%, #db2777 100%)', color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: 'pointer', transition: 'all .2s', boxShadow: '0 0 25px rgba(219, 39, 119, 0.6)', textTransform: 'uppercase', letterSpacing: '2px' },
-  errBox:    { marginTop: 16, padding: '14px 18px', background: 'rgba(185, 28, 28, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 10, color: '#fca5a5', fontSize: 14 },
-  
-  aiResult:  { marginTop: 28, padding: '26px 30px', background: 'rgba(0, 0, 0, 0.4)', borderRadius: 14, borderLeft: '5px solid #818cf8', boxShadow: 'inset 0 0 20px rgba(99,102,241,0.1)' },
-  aiRT:      { fontSize: 18, fontWeight: 900, color: '#818cf8', margin: '0 0 16px', letterSpacing: '1px', textTransform: 'uppercase', textShadow: '0 0 10px rgba(129, 140, 248, 0.4)' },
-  aiRB:      { fontSize: 15, color: '#cbd5e1', lineHeight: 1.85, whiteSpace: 'pre-line', margin: 0 },
+  riskSal:   { fontFamily: 'monospace', fontSize: 14, color: '#10b981', fontWeight: 600 },
+  aiPanel:   { background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', borderTop: '4px solid #6366f1', padding: 28, boxShadow: '0 4px 20px rgba(99, 102, 241, 0.05)' },
+  aiHeader:  { display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 },
+  aiTitle:   { fontSize: 18, fontWeight: 700, color: '#0f172a', margin: 0 },
+  aiBtn:     { padding: '12px 28px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 600, cursor: 'pointer', transition: 'background .2s' },
+  errBox:    { marginTop: 16, padding: '14px 18px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, color: '#b91c1c', fontSize: 14 },
+  aiResult:  { marginTop: 24, padding: '24px 28px', background: '#f5f3ff', borderRadius: 14, borderLeft: '4px solid #6366f1' },
+  aiRT:      { fontSize: 16, fontWeight: 700, color: '#3730a3', margin: '0 0 14px' },
+  aiRB:      { fontSize: 14, color: '#374151', lineHeight: 1.8, whiteSpace: 'pre-line', margin: 0 },
 };
 
+// Modal stilleri (Değişmedi, sadece buton/padding hafif genişletildi)
 const ms = {
-  overlay:   { position: 'fixed', inset: 0, background: 'rgba(15,23,42,.85)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
-  modal:     { background: '#1e1b4b', borderRadius: 18, width: '100%', maxWidth: 660, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 60px rgba(0,0,0,.6)', border: '1px solid rgba(255,255,255,0.05)' },
+  overlay:   { position: 'fixed', inset: 0, background: 'rgba(15,23,42,.6)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 },
+  modal:     { background: '#fff', borderRadius: 18, width: '100%', maxWidth: 660, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 60px rgba(0,0,0,.25)' },
   head:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '20px 24px 12px' },
   closeBtn:  { background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: 4, borderRadius: 6, flexShrink: 0 },
   body:      { overflowY: 'auto', padding: '0 24px 4px', display: 'flex', flexDirection: 'column', gap: 7 },
-  row:       { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)', transition: 'all .15s' },
+  row:       { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, border: '1px solid #e2e8f0', transition: 'all .15s' },
   leftCol:   { display: 'flex', flexDirection: 'column', minWidth: 170, flexShrink: 0 },
-  select:    { flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid rgba(255,255,255,0.1)', fontSize: 13, background: 'transparent', outline: 'none', cursor: 'pointer' },
-  err:       { margin: '10px 24px 0', padding: '10px 14px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 8, color: '#fca5a5', fontSize: 13 },
-  foot:      { display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 24px 18px', borderTop: '1px solid rgba(255,255,255,0.05)', marginTop: 12 },
-  cancelBtn: { padding: '9px 20px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#94a3b8', borderRadius: 9, fontSize: 14, cursor: 'pointer', fontWeight: 500 },
-  confirmBtn:{ padding: '9px 22px', background: 'linear-gradient(135deg, #6366f1 0%, #db2777 100%)', color: '#fff', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'opacity .15s' },
+  select:    { flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff', outline: 'none', cursor: 'pointer' },
+  err:       { margin: '10px 24px 0', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: 13 },
+  foot:      { display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 24px 18px', borderTop: '1px solid #e2e8f0', marginTop: 12 },
+  cancelBtn: { padding: '9px 20px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 9, fontSize: 14, cursor: 'pointer', fontWeight: 500 },
+  confirmBtn:{ padding: '9px 22px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer', transition: 'opacity .15s' },
 };
