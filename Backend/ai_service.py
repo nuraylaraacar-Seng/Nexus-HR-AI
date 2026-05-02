@@ -4,7 +4,7 @@ import requests
 
 class HRConsultantAI:
     def __init__(self):
-        self.api_key = os.getenv("Llama_API_KEY")  # .env'deki key adı korundu
+        self.api_key = os.getenv("Llama_API_KEY")  
         self.url     = "https://api.groq.com/openai/v1/chat/completions"
         self.model   = "llama-3.3-70b-versatile"
 
