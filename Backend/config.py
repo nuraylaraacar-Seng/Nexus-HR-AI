@@ -2,7 +2,7 @@ ALLOWED_METRICS = {
     "Salary",
     "EngagementSurvey",
     "EmpSatisfaction",
-    "SpecialProjectsCount",
+    "SpecialProjectsCount",CJKVRHEIH
     "DaysLateLast30"
 }
 
