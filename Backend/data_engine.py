@@ -168,8 +168,11 @@ class HRDataEngine:
         if 'EngagementSurvey' in self.df.columns:
             mask &= self.df['EngagementSurvey'] < 3.5
 
-        
-        # Maskeyi ana veriye kalıcı kolon olarak ekle:
+        #determenistic hurn prediction conditions 
+        """ 
+        Maskeyi ana veriye kalıcı kolon olarak ekle
+        determenistik çalışan kaybı tahmin koşulları
+        """
         self.df['Is_Risk'] = mask.astype(int)
         
         result["flight_risk_count"] = int(mask.sum())
