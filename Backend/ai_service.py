@@ -1,9 +1,15 @@
 import os
 import requests
 
-
 class HRConsultantAI:
     def __init__(self):
+        """
+        AI Service Integration using Groq API (Llama 3.3).
+        Handles prompt construction and external API communications.
+        ---
+        Groq API (Llama 3.3) kullanan Yapay Zeka Servis Entegrasyonu.
+        İstem (prompt) oluşturma ve harici API iletişimlerini yönetir.
+        """
         self.api_key = os.getenv("Llama_API_KEY")  
         self.url     = "https://api.groq.com/openai/v1/chat/completions"
         self.model   = "llama-3.3-70b-versatile"
@@ -13,11 +19,15 @@ class HRConsultantAI:
 
     def generate_executive_summary(self, risk_data: dict) -> dict:
         """
-        Groq / Llama-3.3 ile stratejik İK raporu üretir.
-        Dönen dict her zaman 'error' key'i içerir (hata varsa) ya da
-        'report_title' + 'ai_insight' içerir (başarılı ise).
-        main.py "error" in result ile kontrol eder.
+        AI Integration: Generates a strategic, C-Level HR report based on dashboard data.
+        Returns dynamic insights rather than static text using Groq Llama 3.3.
+        ---
+        Yapay Zeka Entegrasyonu: Dashboard verilerine dayanarak stratejik, C-Level bir İK raporu üretir.
+        Groq Llama 3.3 kullanarak statik metin yerine dinamik içgörüler döndürür.
         """
+        
+        # PROMPT ENGINEERING: Persona injection and strict output formatting
+        # İSTEM MÜHENDİSLİĞİ: Persona enjeksiyonu ve katı çıktı biçimlendirmesi
         prompt = f"""
 [ROLE]
 You are a Senior Managing Partner at a top-tier global management consultancy (McKinsey, BCG, or Bain).
@@ -64,6 +74,8 @@ The CHRO and Board of Directors expect a high-stakes, data-driven assessment.
                 },
                 {"role": "user", "content": prompt}
             ],
+            # Low temperature: For analytical and definitive answers rather than creativity
+            # Düşük sıcaklık: Yaratıcılıktan ziyade analitik ve kesin cevaplar için
             "temperature": 0.3,
             "max_tokens": 1500,
         }
