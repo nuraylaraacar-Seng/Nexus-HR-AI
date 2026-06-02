@@ -56,6 +56,8 @@ A functional prototype is only as good as its architecture. Moving beyond just c
 * **Library:** React.js (Vite)
 * **Visuals:** Recharts & Lucide React Icons
 
+###
+
 ## ⚙️ Local Installation
 ```bash
 # Clone the repository
