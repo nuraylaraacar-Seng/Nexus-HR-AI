@@ -169,7 +169,12 @@ class HRDataEngine:
         if 'EngagementSurvey' in self.df.columns:
             mask &= self.df['EngagementSurvey'] < 3.5
 
-        #d
+        """ 
+        Feature Engineering: 
+        Add the computed mask as a permanent column
+        """
+        """Özellik Mühendisliği:
+        Hesaplanmış maskeyi kalıcı kolon olarak ekler"""
         self.df['Is_Risk'] = mask.astype(int)
         
         result["flight_risk_count"] = int(mask.sum())
@@ -199,6 +204,11 @@ class HRDataEngine:
         return corr.loc['Salary', available].to_dict()
 
     def analyze_gender_pay_gap(self) -> dict:
+        """
+        Analyzes the pay gap between genders across different departments.
+        ---
+        Farklı departmanlar genelinde cinsiyetler arası maaş uçurumunu analiz eder.
+        """
         if self.df.empty:
             return {}
         needed = {'Salary', 'Department', 'Sex'}
