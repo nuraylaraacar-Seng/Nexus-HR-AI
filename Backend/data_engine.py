@@ -42,7 +42,7 @@ class HRDataEngine:
 
             self.df = raw.copy()
 
-            # --- 1. VERİ TEMİZLEME ---
+           
             self.df.columns = self.df.columns.astype(str)
 
             if 'Termd' in self.df.columns:
@@ -56,9 +56,9 @@ class HRDataEngine:
                 self.df['Sex'] = self.df['Sex'].astype(str).str.strip()
 
 
-            # --- 2. Akıllı Veri Doldurma ---
-            #eksik veriyi silmiyoruz , eksikleri  olarak dolduruyoruz.
-
+            
+            #Fill missing salary data with department averages
+            #Eksik maaş verilerini departman ortalamasıyla doldurur
             if 'Salary' in self.df.columns:
                 # Sayısal olmayan bozuk maaş verilerini (örn: "Gizli") tespit edip NaN (boş) yap
                 self.df['Salary'] = pd.to_numeric(self.df['Salary'], errors='coerce')
@@ -105,6 +105,11 @@ class HRDataEngine:
             self.df = pd.DataFrame()
 
     def calculate_dynamic_kpi(self, department: str, metric: str, calc_type: str) -> dict:
+        """
+        Dynamic Aggregation Engine for generating on-the-fly KPIs.
+        ---
+        Anında KPI üretmek için Dinamik Birleştirme Motoru.
+        """
         if self.df.empty:
             return {"error": "Veri seti boş veya yüklenemedi."}
         if metric not in ALLOWED_METRICS:
