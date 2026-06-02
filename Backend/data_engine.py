@@ -159,7 +159,8 @@ class HRDataEngine:
         else:
             result["average_engagement"] = 0
 
-        # Flight risk(istifa riski): mevcut kolonlara göre esnek hesapla
+        #Deterministic churn prediction conditions
+        #Belirlenimci çalışan kaybı tahmin koşulları
         mask = pd.Series([True] * len(self.df), index=self.df.index)
         if 'Salary' in self.df.columns:
             mask &= self.df['Salary'] < avg_salary
@@ -168,11 +169,7 @@ class HRDataEngine:
         if 'EngagementSurvey' in self.df.columns:
             mask &= self.df['EngagementSurvey'] < 3.5
 
-        #determenistic hurn prediction conditions 
-        """ 
-        Maskeyi ana veriye kalıcı kolon olarak ekle
-        determenistik çalışan kaybı tahmin koşulları
-        """
+        #d
         self.df['Is_Risk'] = mask.astype(int)
         
         result["flight_risk_count"] = int(mask.sum())
