@@ -38,17 +38,23 @@ app = FastAPI(title="Nexus HR API", version="2.1.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# CORS Policy: Allows only whitelisted frontends to access the API
+# CORS Politikası: Sadece izin verilen frontend'lerin API'a erişmesini sağlar
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 app.add_middleware(
     CORSMiddleware, allow_origins=allowed_origins,
     allow_credentials=False, allow_methods=["*"], allow_headers=["*"],
 )
 
+#PATH CONFİGURATİON
+#DOSYA YAPILANDIRILMASI
 BASE_DIR          = Path(__file__).parent.parent
 DEFAULT_DATA_PATH = BASE_DIR / "Data" / "HRDataset_v14.csv"
 SESSION_DATA_DIR  = BASE_DIR / "Data" / "sessions"
 SESSION_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+# STATE MANAGEMENT: In-memory session tracking for active Data Engines
+# DURUM YÖNETİMİ: Aktif Veri Motorları için bellek içi oturum takibi
 _session_engines: dict[str, HRDataEngine] = {}
 _pending_sessions: dict[str, dict]        = {}
 
