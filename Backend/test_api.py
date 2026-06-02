@@ -1,6 +1,5 @@
 """
-FastAPI endpoint'leri için integration testler.
-Çalıştırmak için: pytest tests/ -v
+
 """
 import pytest
 from fastapi.testclient import TestClient
