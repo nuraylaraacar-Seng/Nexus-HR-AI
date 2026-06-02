@@ -103,7 +103,7 @@ def test_flight_risk_returns_list(client):
     assert isinstance(response.json()["data"], list)
 
 
-# --- GENDER PAY GAP ENDPOİNT ---
+# --- Gender pay endpoint ---
 
 def test_gender_pay_gap_returns_dict(client):
     response = client.get("/api/v1/analytics/gender-pay-gap")
@@ -111,7 +111,7 @@ def test_gender_pay_gap_returns_dict(client):
     assert isinstance(response.json()["data"], dict)
 
 
-# --- AI SUMMARY ENDPOİNT ---
+# --- AI Summary Endpoint ---
 
 def test_ai_summary_success(client):
     response = client.get("/api/v1/ai/executive-summary")
