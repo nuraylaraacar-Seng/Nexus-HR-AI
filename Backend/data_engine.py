@@ -7,17 +7,21 @@ from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
 class HRDataEngine:
     def __init__(self, file_path: str, column_mapping: dict = None):
         """
-        file_path      : CSV dosyasının yolu
-        column_mapping : { "Salary": "maas_tl", "Department": "bolum", ... }
-                         None veya boş ise kolonlar olduğu gibi kullanılır.
-        """
+        Core Data Engine for HR Analytics.
+          Handles ETL (Extract, Transform, Load) pipelines locally via Pandas.
+           ---
+        İK Analitiği için Temel Veri Motoru.
+        ETL (Çıkarma, Dönüştürme, Yükleme) süreçlerini Pandas üzerinden yerel olarak yönetir.
+         """
         BASE_DIR = Path(__file__).parent.parent
         allowed_bases = [
             (BASE_DIR / "Data").resolve(),
             (BASE_DIR / "Data" / "sessions").resolve(),
         ]
         resolved = Path(file_path).resolve()
-        
+
+        #Path Traversal Attack prevention
+        #Dizin Gezinme Saldırısı koruması
         if not any(str(resolved).startswith(str(b)) for b in allowed_bases):
             raise ValueError(f"Güvensiz dosya yolu! İzin verilenler: {[str(b) for b in allowed_bases]}")
 
@@ -30,7 +34,8 @@ class HRDataEngine:
         try:
             raw = pd.read_csv(self.file_path)
 
-            # Kolon yeniden adlandırma
+           # COLUMN NORMALIZATION: Apply user mapping
+           # KOLON NORMALİZASYONU: Kullanıcı eşleştirmesini uygula
             if self.column_mapping:
                 rename_map = {v: k for k, v in self.column_mapping.items() if v and v in raw.columns}
                 raw = raw.rename(columns=rename_map)
