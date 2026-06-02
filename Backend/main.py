@@ -29,6 +29,10 @@ from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+#Rate Limiter-IP-based request limitation 
+#Guards against API abuse
+#Hız Sınırlayıcı: IP tabanlı istek sınırlaması
+#API suistimaline karşı koruma sağlar
 limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(title="Nexus HR API", version="2.1.0")
 app.state.limiter = limiter
