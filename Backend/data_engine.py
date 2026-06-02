@@ -137,6 +137,13 @@ class HRDataEngine:
             return {"error": "Hesaplama hatası."}
 
     def get_risk_summary(self) -> dict:
+        """
+        Rule-Based Risk Scoring Algorithm.
+        Calculates flight risk based on multiple conditions (Salary, Performance, Engagement).
+        ---
+        Kural Tabanlı Risk Puanlama Algoritması.
+        Çoklu koşullara (Maaş, Performans, Bağlılık) göre istifa riskini hesaplar.
+        """
         if self.df.empty:
             return {}
         result = {"total_employees": len(self.df)}
