@@ -1,7 +1,9 @@
 """
 Nexus HR: Enterprise AI Dashboard API v2.1
-- Session bazlı engine yönetimi
-- Esnek kolon eşleştirme (column mapping)
+Architecture/Mimari:
+-Session-Based Memory Managment (Kullanıcıya özel in-memory engine)
+-Dynamic Column Mapping(Esnek Veri Eşleştirme)
+-Rate Limiting (Ddos saldırıların karşı koruma)
 """
 
 import os, uuid, logging
