@@ -1,5 +1,9 @@
 """
-Çok kötüsün
+API Integration Tests (Pytest).
+Mocks the underlying Data Engine and AI Service to test endpoint responses, validation logic, and error handling in complete isolation.
+---
+API Entegrasyon Testleri (Pytest).
+Uç nokta (endpoint) yanıtlarını, doğrulama mantığını ve hata yönetimini tam bir izolasyon içinde test etmek için Veri Motoru ve Yapay Zeka servisini taklit eder (mocking).
 """
 import pytest
 from fastapi.testclient import TestClient
@@ -14,7 +18,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 @pytest.fixture
 def client():
-    """Test client'ı mock data engine ile oluşturur."""
+    """
+    Fixture: 
+    Instantiates the FastAPI test client with a mock HRDataEngine.
+    Prevents tests from mutating the actual production datasets.
+    ---
+    Fixture: 
+    FastAPI test istemcisini sahte (mock) bir HRDataEngine ile başlatır.
+    Testlerin gerçek üretim veri setlerini değiştirmesini (mutate) engeller.
+    """
     mock_engine = MagicMock()
     mock_engine.df = pd.DataFrame({'Salary': [50000, 60000]})
     mock_engine.calculate_dynamic_kpi.return_value = {
