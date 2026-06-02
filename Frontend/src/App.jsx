@@ -4,8 +4,9 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import {
   Users, DollarSign, BrainCircuit, AlertTriangle,
   Upload, X, CheckCircle, Database, LogOut, Activity, ArrowRight
-} from 'lucide-react';ndcsjakbvj
-csdbhjhvbah
+} from 'lucide-react';
+#Cybrepunk concept
+
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api/v1';
 
 const REQUIRED_COLS = ["Salary", "Department", "Termd", "EngagementSurvey"];
