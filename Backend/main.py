@@ -262,9 +262,9 @@ async def get_ai_summary(request: Request,
 @app.delete("/api/v1/session")
 async def delete_session(x_session_id: Optional[str] = Header(default=None)):
     """
-    Clears the session data from memory and deletes temporary files
+    Clears the session data from memory and deletes temporary files.
     ---
-    Oturum verilerini bellekten temizler ve geçici dosyaları siler
+    Oturum verilerini bellekten temizler ve geçici dosyaları siler.
     """
     if not x_session_id or x_session_id not in _session_engines:
         return {"status": "error", "message": "Geçerli session bulunamadı."}
