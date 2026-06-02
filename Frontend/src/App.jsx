@@ -5,8 +5,9 @@ import {
   Users, DollarSign, BrainCircuit, AlertTriangle,
   Upload, X, CheckCircle, Database, LogOut, Activity, ArrowRight
 } from 'lucide-react';
-#CyberPunk Concept
-
+/*
+CyberPunk Concept
+*/
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api/v1';
 
 const REQUIRED_COLS = ["Salary", "Department", "Termd", "EngagementSurvey"];
