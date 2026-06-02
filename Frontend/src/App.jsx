@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import {
   Users, DollarSign, BrainCircuit, AlertTriangle,
   Upload, X, CheckCircle, Database, LogOut, Activity, ArrowRight
-} from 'lucide-react';
+} from 'lucide-react';ndcsjakbvj
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000/api/v1';
 
