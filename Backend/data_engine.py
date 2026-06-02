@@ -34,8 +34,8 @@ class HRDataEngine:
         try:
             raw = pd.read_csv(self.file_path)
 
-           # COLUMN NORMALIZATION: Apply user mapping
-           # KOLON NORMALİZASYONU: Kullanıcı eşleştirmesini uygula
+           # Apply user mapping
+           # Kullanıcı eşleştirmesini uygular
             if self.column_mapping:
                 rename_map = {v: k for k, v in self.column_mapping.items() if v and v in raw.columns}
                 raw = raw.rename(columns=rename_map)
