@@ -67,6 +67,15 @@ ALL_STANDARD = REQUIRED_COLUMNS + OPTIONAL_COLUMNS
 
 
 def get_engine(sid: Optional[str]) -> HRDataEngine:
+    """
+    Session Controller: Returns the correct Data Engine based on the ID from the client.
+    If the session does not exist, it loads the default dataset.
+    ->Fallback mechanism
+    ---
+    Oturum Kontrolcüsü: İstemciden gelen ID'ye göre doğru Data Engine'i döndürür.
+    Eğer oturum yoksa varsayılan veri setini yükler.
+    -> Geri dönüş mekanizması
+    """
     if sid and sid in _session_engines:
         return _session_engines[sid]
     if "default" not in _session_engines:
@@ -75,7 +84,8 @@ def get_engine(sid: Optional[str]) -> HRDataEngine:
         _session_engines["default"] = HRDataEngine(str(DEFAULT_DATA_PATH))
     return _session_engines["default"]
 
-
+#Data Validation models
+#Veri Doğrulama Modelleri
 class KPIRequest(BaseModel):
     department: str
     metric: str
