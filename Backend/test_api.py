@@ -27,6 +27,7 @@ def client():
     FastAPI test istemcisini sahte (mock) bir HRDataEngine ile başlatır.
     Testlerin gerçek üretim veri setlerini değiştirmesini (mutate) engeller.
     """
+    
     mock_engine = MagicMock()
     mock_engine.df = pd.DataFrame({'Salary': [50000, 60000]})
     mock_engine.calculate_dynamic_kpi.return_value = {
@@ -62,7 +63,7 @@ def client():
             yield c
 
 
-# --- HEALTH CHECK ---
+# --- Health Check ---
 
 def test_health_check(client):
     response = client.get("/api/v1/health")
@@ -70,7 +71,7 @@ def test_health_check(client):
     assert response.json()["status"] == "healthy"
 
 
-# --- KPI ENDPOİNT ---
+# --- KPI Endpoints ---
 
 class TestKPIEndpoint:
 
@@ -94,7 +95,7 @@ class TestKPIEndpoint:
         assert response.status_code == 422
 
 
-# --- FLIGHT RISK ENDPOİNT ---
+# --- Flıght Rısk Endpoint ---
 
 def test_flight_risk_returns_list(client):
     response = client.get("/api/v1/analytics/flight-risk")
