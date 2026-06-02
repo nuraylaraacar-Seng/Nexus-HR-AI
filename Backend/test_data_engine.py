@@ -37,7 +37,8 @@ def engine_with_data(tmp_path):
     csv_path = tmp_path / "test_data.csv"
     make_sample_df().to_csv(csv_path, index=False)
 
-    # Path güvenlik kontrolünü bypass etmek için patch kullanıyoruz
+    # Bypass path security check using mock for testing
+    # Test için path güvenlik kontrolünü mock kullanarak atla
     with patch.object(HRDataEngine, '__init__', lambda self, fp: None):
         eng = HRDataEngine.__new__(HRDataEngine)
         eng.file_path = csv_path
@@ -47,7 +48,7 @@ def engine_with_data(tmp_path):
     return eng
 
 
-# --- calculate_dynamic_kpi TESTLERİ ---
+# --- calculate_dynamic_kpi Tests ---
 
 class TestCalculateDynamicKPI:
 
@@ -79,7 +80,7 @@ class TestCalculateDynamicKPI:
         assert "error" in result
 
 
-# --- predict_flight_risk_advanced TESTLERİ ---
+# --- predict_flight_risk_advanced TETests---
 
 class TestFlightRiskAdvanced:
 
@@ -105,7 +106,7 @@ class TestFlightRiskAdvanced:
         assert engine_with_data.predict_flight_risk_advanced() == []
 
 
-# --- get_risk_summary TESTLERİ ---
+# --- get_risk_summary Tests---
 
 class TestGetRiskSummary:
 
@@ -121,7 +122,7 @@ class TestGetRiskSummary:
         assert result['total_employees'] == 5
 
 
-# --- analyze_gender_pay_gap TESTLERİ ---
+# --- analyze_gender_pay_gap Tests---
 
 class TestGenderPayGap:
 
