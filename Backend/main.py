@@ -24,7 +24,8 @@ from Backend.data_engine import HRDataEngine
 from Backend.ai_service import HRConsultantAI
 from Backend.config import ALLOWED_METRICS, ALLOWED_CALC_TYPES
 
-
+# INITIALIZATION & SECURITY SETUP
+#Başlatma Ve Güvenlik Ayarları
 load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
