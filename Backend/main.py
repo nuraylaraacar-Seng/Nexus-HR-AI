@@ -109,9 +109,14 @@ class KPIRequest(BaseModel):
 class ColumnMappingRequest(BaseModel):
     mapping: dict[str, str]
 
-
+#Endpoints
 @app.post("/api/v1/upload-dataset")
 async def upload_dataset(file: UploadFile = File(...)):
+    """
+    Handles file uploads, performs initial validation, and creates a temporary session.
+    ---
+    Dosya yüklemelerini yönetir, ilk doğrulamayı yapar ve geçici bir oturum oluşturu
+    """
     try:
         contents = await file.read()
         if not contents:
@@ -124,7 +129,8 @@ async def upload_dataset(file: UploadFile = File(...)):
         
         with open(save_path, "wb") as f:
             f.write(contents)
-
+        #Automatic mapping attempt
+        #Otomatik eşleştirme girişimi
         missing_required = [c for c in REQUIRED_COLUMNS if c not in actual_cols]
         auto_mapping     = {c: c for c in ALL_STANDARD if c in actual_cols}
 
@@ -155,6 +161,11 @@ async def upload_dataset(file: UploadFile = File(...)):
 
 @app.post("/api/v1/upload-dataset/confirm-mapping/{pending_id}")
 async def confirm_mapping(pending_id: str, body: ColumnMappingRequest):
+    """
+    Confirms user-provided column mappings and activates the session data engine.
+    ---
+    Kullanıcının sağladığı kolon eşleştirmelerini onaylar ve oturum veri motorunu aktifleştirir.
+    """
     if pending_id not in _pending_sessions:
         raise HTTPException(status_code=404, detail="Geçersiz ya da süresi dolmuş pending session.")
 
@@ -228,7 +239,7 @@ async def get_flight_risk(request: Request,
 @limiter.limit("5/minute")
 async def get_ai_summary(request: Request,
                          x_session_id: Optional[str] = Header(default=None)):
-    # AI engine kontrolü
+    # AI engine check
     if ai_engine is None:
         raise HTTPException(
             status_code=503,
