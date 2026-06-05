@@ -102,6 +102,6 @@ The CHRO and Board of Directors expect a high-stakes, data-driven assessment.
             }
 
         except requests.exceptions.Timeout:
-            return {"error": "Groq API zaman aşımına uğradı (60s). Tekrar dene."}
+            return {"error": "Groq API zaman aşımına uğradı (60s). lütfen Tekrar deneyin."}
         except Exception as e:
             return {"error": f"AI servis hatası: {str(e)}"}
