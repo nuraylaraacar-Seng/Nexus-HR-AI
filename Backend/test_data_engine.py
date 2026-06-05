@@ -11,6 +11,7 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
+#VERİ BİLİMİNİ  ÇOK SEVİYORUMMMM ❤️
 
 # --- TEST DATA/ TEST VERİSİ ---
 def make_sample_df():
