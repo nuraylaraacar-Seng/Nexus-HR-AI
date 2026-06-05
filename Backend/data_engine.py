@@ -18,7 +18,7 @@ class HRDataEngine:
             (BASE_DIR / "Data").resolve(),
             (BASE_DIR / "Data" / "sessions").resolve(),
         ]
-        resolved = Path(file_path).
+        resolved = Path(file_path).resolve()
 
         #Path Traversal Attack prevention
         #Dizin Gezinme Saldırısı koruması
