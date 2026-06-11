@@ -75,7 +75,7 @@ The CHRO and Board of Directors expect a high-stakes, data-driven assessment.
                 {"role": "user", "content": prompt}
             ],
             # Low temperature: For analytical and definitive answers rather than creativity
-            # Düşük sıcaklık: Yaratıcılıktan ziyade analitik ve kesin cevaplar için
+            # Düşük sıcaklık: Yaratıcılıktan ziyade analitik ve kesin cevaplar için seçtim
             "temperature": 0.3,
             "max_tokens": 1500,
         }
