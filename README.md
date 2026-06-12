@@ -14,16 +14,19 @@
                                                        Not: Backend ücretsiz Railway sunucusunda çalıştığı için ilk isteklerde uyanması 30-40 saniye sürebilir.
 
 
-## 📌 Project Context & Overview
-Nexus HR is an end-to-end Minimum Viable Product (MVP) designed to bridge the gap between raw HR datasets and actionable decision-making. 
+📌 Project Context & Overview
 
-**The Origin Story:** This project was initially conceptualized for a Software Requirements Analysis course where 90% of the evaluation was based purely on documentation. However, to demonstrate true full-stack capability, I took the initiative to build and deploy the complete system solo. It combines **Data Engineering, Rule-Based Risk Scoring,** and **Generative AI** into a live, functional dashboard.
+Nexus HR is a full-stack analytics system that transforms structured HR datasets into computed metrics and LLM-generated executive summaries.
 
-### 🛠️ Strategic Engineering Choice: Prototyping & Data Focus
-During this development phase, a **CSV-based Data Engine** was intentionally chosen over a traditional SQL/PostgreSQL database. 
-* **Rapid Prototyping:** To iterate quickly on the core **Data Analysis Problem** and AI logic without database overhead.
-* **Analytical Focus:** The project prioritizes complex data transformations (ETL, log normalization) and predictive modeling over standard CRUD operations.
-* **Future Roadmap:** Migrating to a persistent PostgreSQL layer is planned for the next iteration to support multi-user concurrency.
+Background:
+The project originated as a Software Requirements Analysis assignment focused on documentation and system design. It was extended into a working prototype to validate the architecture through implementation.
+
+🛠️ Data Handling & Prototyping
+For this MVP, the application runs on a static CSV dataset rather than a traditional relational database.
+
+Focus on Core Logic: Using a static file allowed me to iterate quickly and focus heavily on data manipulation (Pandas) and AI prompt engineering without the overhead of database management.
+
+Future Roadmap: Integrating a proper relational database is the primary goal for the next iteration to support dynamic CRUD operations and multi-user concurrency.
 
 ## 🚀 Core Features
 
