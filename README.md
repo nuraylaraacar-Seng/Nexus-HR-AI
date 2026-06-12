@@ -21,12 +21,33 @@ Nexus HR is a full-stack analytics system that transforms structured HR datasets
 Background:
 The project originated as a Software Requirements Analysis assignment focused on documentation and system design. It was extended into a working prototype to validate the architecture through implementation.
 
-🛠️ Data Handling & Prototyping
-For this MVP, the application runs on a static CSV dataset rather than a traditional relational database.
+🛠️ Data Layer & System Design
 
-Focus on Core Logic: Using a static file allowed me to iterate quickly and focus heavily on data manipulation (Pandas) and AI prompt engineering without the overhead of database management.
+The system operates on a file-based CSV data source instead of a relational database in its initial version.
 
-Future Roadmap: Integrating a proper relational database is the primary goal for the next iteration to support dynamic CRUD operations and multi-user concurrency.
+Design Rationale:
+
+Eliminates database overhead to prioritize data pipeline development
+Enables rapid iteration on:
+Data cleaning (Pandas-based ETL)
+Feature engineering
+Risk scoring logic
+LLM prompt orchestration
+
+Trade-off:
+
+Reduced scalability and concurrency support
+Improved development velocity and experimental flexibility
+
+
+🧭 Future Architecture Direction
+
+Planned migration toward a relational database layer (PostgreSQL) to support:
+
+Persistent multi-user sessions
+Concurrent data access
+Production-grade CRUD operations
+Scalable analytics workloads
 
 ## 🚀 Core Features
 
