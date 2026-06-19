@@ -14,8 +14,9 @@ class HRConsultantAI:
         self.url     = "https://api.groq.com/openai/v1/chat/completions"
         self.model   = "llama-3.3-70b-versatile"
 
-        if not self.api_key:
-            raise ValueError("Llama_API_KEY environment variable eksik! .env dosyanı kontrol et.")
+        self.api_key = os.getenv("Llama_API_KEY")
+        self.available = bool(self.api_key)
+
 
     def generate_executive_summary(self, risk_data: dict) -> dict:
         """
