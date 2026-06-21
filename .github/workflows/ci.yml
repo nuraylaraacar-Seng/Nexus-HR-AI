@@ -24,8 +24,8 @@ jobs:
 
       - name: Run tests
         env:
-          # CI'da Redis ve Groq key yok — sistem bunlarsız çalışabilmeli.
-          # Bu da fail-safe davranışın gerçek bir entegrasyon kanıtı.
+          # CI'da Redis ve Groq key yok — sistem bunlarsız çalışabilmeli
+          #ondan koydum.
           REDIS_URL: ""
           Llama_API_KEY: ""
         run: pytest Backend/ -v --cov=Backend --cov-report=term-missing
