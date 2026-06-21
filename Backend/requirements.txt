@@ -11,7 +11,7 @@ pandas==2.2.2
 numpy==1.26.4
 google-generativeai==0.7.2
 redis==5.0.4
-requests==2.31.0
+requests==2.33.0
 
 # Test & CI/CD (Burası CI robotunu susturmak için zorunlu)
 pytest==8.2.2
