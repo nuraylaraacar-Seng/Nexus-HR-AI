@@ -179,9 +179,8 @@ class HRDataEngine:
         """
         """Özellik Mühendisliği:
         Hesaplanmış maskeyi kalıcı kolon olarak ekler"""
-        self.df['Is_Risk'] = mask.astype(int)
-        
-        result["flight_risk_count"] = int(mask.sum())
+        temp_risk = mask.astype(int)
+        result["flight_risk_count"] = int(temp_risk.sum())
         
     
         if len(self.df) > 0:
