@@ -13,7 +13,7 @@ class HRDataEngine:
         İK Analitiği için Temel Veri Motoru.
         ETL (Çıkarma, Dönüştürme, Yükleme) süreçlerini Pandas üzerinden yerel olarak yönetir.
         """
-        BASE_DIR = Path(__file__).parent
+        BASE_DIR = Path(__file__).resolve().parent.parent
         allowed_bases = [
             (BASE_DIR / "Data").resolve(),
             (BASE_DIR / "Data" / "sessions").resolve(),
