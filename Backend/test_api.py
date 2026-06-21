@@ -50,14 +50,18 @@ def client():
     }
 
     mock_ai = MagicMock()
-    mock_ai.model = MagicMock()
+    mock_ai.available = True
     mock_ai.generate_executive_summary.return_value = {
         "report_title": "AI Stratejik Yönetici Özeti",
         "ai_insight": "Test insight.",
         "status": "Success"
     }
 
-    with patch('Backend.main.engine', mock_engine), patch('Backend.main.ai_engine', mock_ai):
+    # main.py'de module-level 'engine' diye bir değişken yok — gerçek mimari
+    # get_engine(sid) fonksiyonu + _session_engines dict üzerinden çalışıyor.
+    # Bu yüzden patch hedefi get_engine'in kendisi olmalı.
+    with patch('Backend.main.get_engine', return_value=mock_engine), \
+         patch('Backend.main.ai_engine', mock_ai):
         from Backend.main import app
         with TestClient(app) as c:
             yield c
@@ -119,3 +123,4 @@ def test_ai_summary_success(client):
     data = response.json()["data"]
     assert "report_title" in data
     assert "ai_insight" in data
+    
