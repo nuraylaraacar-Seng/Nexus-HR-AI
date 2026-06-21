@@ -9,6 +9,6 @@ class Employee(Base):
     employee_name = Column(String, index=True)
     department = Column(String)
     salary = Column(Float)
-    engagement_survey = Column(float)
+    engagement_survey = Column(Float)
     performance_score = Column(String)
     
