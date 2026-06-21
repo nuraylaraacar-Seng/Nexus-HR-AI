@@ -38,7 +38,7 @@ def engine_with_data(tmp_path):
     make_sample_df().to_csv(csv_path, index=False)
 
     # Bypass path security check using mock for testing
-    # Test için path güvenlik kontrolünü mock kullanarak atla
+    # Test için path güvenlik kontrolünü mock kullanarak atlama
     with patch.object(HRDataEngine, '__init__', lambda self, fp: None):
         eng = HRDataEngine.__new__(HRDataEngine)
         eng.file_path = csv_path
@@ -48,7 +48,7 @@ def engine_with_data(tmp_path):
     return eng
 
 
-# --- calculate_dynamic_kpi Tests ---
+# calculate_dynamic_kpi Tests 
 
 class TestCalculateDynamicKPI:
 
@@ -80,7 +80,7 @@ class TestCalculateDynamicKPI:
         assert "error" in result
 
 
-# --- predict_flight_risk_advanced TETests---
+#predict_flight_risk_advanced Tests
 
 class TestFlightRiskAdvanced:
 
@@ -106,7 +106,7 @@ class TestFlightRiskAdvanced:
         assert engine_with_data.predict_flight_risk_advanced() == []
 
 
-# --- get_risk_summary Tests---
+#get_risk_summary Tests
 
 class TestGetRiskSummary:
 
@@ -121,8 +121,25 @@ class TestGetRiskSummary:
         result = engine_with_data.get_risk_summary()
         assert result['total_employees'] == 5
 
+    def test_does_not_mutate_original_df(self, engine_with_data):
+        """ÖNEMLİ  :
+        get_risk_summary self.df'e kalıcı kolon eklememeli.
+        Eskiden 'Is_Risk' kolonu self.df'e yazılıyordu — concurrent request'lerde
+        veri yarışına yol açabilirdi. Artık salt-okunur olmalıydı ve yaptım."""
+        original_cols = set(engine_with_data.df.columns)
+        engine_with_data.get_risk_summary()
+        assert set(engine_with_data.df.columns) == original_cols, \
+            "get_risk_summary self.df'i mutate etti!"
 
-# --- analyze_gender_pay_gap Tests---
+    def test_idempotent_across_calls(self, engine_with_data):
+        """Aynı veri üzerinde art arda çağrılar aynı sonucu vermeli —
+        mutate eden bir önceki versiyon bunu garanti etmiyordu."""
+        first = engine_with_data.get_risk_summary()
+        second = engine_with_data.get_risk_summary()
+        assert first == second
+
+
+# analyze_gender_pay_gap Tests
 
 class TestGenderPayGap:
 
@@ -134,3 +151,31 @@ class TestGenderPayGap:
         result = engine_with_data.analyze_gender_pay_gap()
         for dept, vals in result.items():
             assert 'Pay_Gap_Percentage' in vals
+
+
+
+# Path Traversal Security Tests 
+
+class TestPathSecurity:
+    """HRDataEngine.__init__ izin verilen dizinler dışındaki dosyaları reddetmeli."""
+
+    def test_rejects_path_outside_allowed_dirs(self):
+        from Backend.data_engine import HRDataEngine
+        with pytest.raises(ValueError, match="Güvensiz dosya yolu"):
+            HRDataEngine("/etc/passwd")
+
+    def test_rejects_relative_traversal(self):
+        from Backend.data_engine import HRDataEngine
+        with pytest.raises(ValueError, match="Güvensiz dosya yolu"):
+            HRDataEngine("../../../etc/passwd")
+
+    def test_accepts_path_inside_data_dir(self, tmp_path, monkeypatch):
+        """Data/ dizini altındaki bir dosya kabul edilmeli (FileNotFoundError
+        verse bile — önemli olan ValueError fırlatmaması, yani path kontrolünü geçmesi)."""
+        from Backend import data_engine
+        # BASE_DIR/Data altında var olmayan bir dosya — ValueError değil
+        # FileNotFoundError yolundan boş df ile devam etmeli.
+        base = data_engine.Path(__file__).resolve().parent.parent
+        fake_path = base / "Data" / "does_not_exist.csv"
+        eng = data_engine.HRDataEngine(str(fake_path))
+        assert eng.df.empty
