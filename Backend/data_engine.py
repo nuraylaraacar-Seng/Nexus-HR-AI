@@ -8,12 +8,12 @@ class HRDataEngine:
     def __init__(self, file_path: str, column_mapping: dict = None):
         """
         Core Data Engine for HR Analytics.
-          Handles ETL (Extract, Transform, Load) pipelines locally via Pandas.
-           ---
+        Handles ETL (Extract, Transform, Load) pipelines locally via Pandas.
+        ---
         İK Analitiği için Temel Veri Motoru.
         ETL (Çıkarma, Dönüştürme, Yükleme) süreçlerini Pandas üzerinden yerel olarak yönetir.
-         """
-        BASE_DIR = Path(__file__).parent.parent
+        """
+        BASE_DIR = Path(__file__).parent
         allowed_bases = [
             (BASE_DIR / "Data").resolve(),
             (BASE_DIR / "Data" / "sessions").resolve(),
@@ -29,20 +29,24 @@ class HRDataEngine:
         self.column_mapping = column_mapping or {}
         self.df = pd.DataFrame()
         self.load_and_clean_data()
+    def safe_df(self):
+        if self.df is None or self.df.empty:
+            return pd.DataFrame()
+        return self.df
 
     def load_and_clean_data(self):
         try:
             raw = pd.read_csv(self.file_path)
 
-           # Apply user mapping
-           # Kullanıcı eşleştirmesini uygular
+        # Apply user mapping
+        # Kullanıcı eşleştirmesini uygular
             if self.column_mapping:
                 rename_map = {v: k for k, v in self.column_mapping.items() if v and v in raw.columns}
                 raw = raw.rename(columns=rename_map)
 
             self.df = raw.copy()
 
-           
+
             self.df.columns = self.df.columns.astype(str)
 
             if 'Termd' in self.df.columns:
@@ -95,7 +99,7 @@ class HRDataEngine:
             if 'DateofHire' in self.df.columns:
                 self.df['DateofHire'] = pd.to_datetime(self.df['DateofHire'], errors='coerce')
 
-            logging.info(f"Veri ZEKİCE yüklendi: {self.file_path.name} | {len(self.df)} kayıt | Kolonlar: {list(self.df.columns)}")
+            logging.info(f"Veri  yüklendi: {self.file_path.name} | {len(self.df)} kayıt | Kolonlar: {list(self.df.columns)}")
         
         except FileNotFoundError:
             logging.error(f"Dosya bulunamadı: {self.file_path}")
