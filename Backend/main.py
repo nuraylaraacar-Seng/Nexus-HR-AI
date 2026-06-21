@@ -40,7 +40,7 @@ app.add_middleware(
     allow_credentials=False, allow_methods=["*"], allow_headers=["*"],
 )
 
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(__file__).parent.parent
 SESSION_DATA_DIR = BASE_DIR / "Data" / "sessions"
 SESSION_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
