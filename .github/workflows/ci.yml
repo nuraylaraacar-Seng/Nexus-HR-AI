@@ -20,7 +20,10 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install --upgrade pip
+          # Dosyanın Backend klasörünün içinde olduğunu robota böyle söylüyoruz:
+          pip install -r Backend/requirements.txt
 
       - name: Run tests
         env:
