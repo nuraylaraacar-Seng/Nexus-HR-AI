@@ -11,7 +11,7 @@
 
 
 🔗 **Live Demo:** [Nexus HR Dashboard'u İncele] https://nexus-hr-ai.vercel.app
-                                                       Not: Backend ücretsiz Railway sunucusunda çalıştığı için ilk isteklerde uyanması 30-40 saniye sürebilir.
+Not: Backend ücretsiz Railway sunucusunda çalıştığı için ilk isteklerde uyanması 30-40 saniye sürebilir.
 
 
 📌 Project Context & Overview
@@ -69,6 +69,27 @@ A functional prototype is only as good as its architecture. Moving beyond just c
 9. **Validation & Change Management**
 
 ## 🛠️ Technology Stack & Architecture
+Architecture Diagram
+```text
+        CSV Upload
+             │
+             ▼
+        FastAPI API
+             │
+             ▼
+      Pandas ETL Engine
+             │
+             ▼
+   KPI & Risk Scoring Engine
+             │
+      ┌──────┴──────┐
+      ▼             ▼
+ Groq LLM      REST API
+      │             │
+      └──────┬──────┘
+             ▼
+     React Dashboard
+```
 
 ### Backend (Data Engine & AI)
 * **Framework:** FastAPI (Python)
