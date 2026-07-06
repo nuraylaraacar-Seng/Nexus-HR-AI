@@ -144,14 +144,21 @@ This keeps the AI layer safe and predictable while reducing data exposure.
 
 ## 📄 Documentation
 
-The project includes standard software engineering artifacts:
+The project is accompanied by a set of software engineering documents created during the analysis and design process, including:
 
+* Vision & Scope
+* Stakeholder Analysis
 * Software Requirements Specification (SRS)
-* Vision & Scope document
-* Risk analysis
+* Analysis Models
+* Requirements Classification
 * Requirements Traceability Matrix (RTM)
+* Risk Analysis
+* Prototype Evolution Report
+* Requirements Validation & Change Management
 
-These were used to guide and structure development rather than being treated as formal paperwork.
+These documents describe the project's requirements, design decisions, and development process, complementing the implementation available in this repository.
+
+See the `/docs` directory for the complete documentation.
 
 ---
 
