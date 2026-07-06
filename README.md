@@ -1,119 +1,190 @@
-# end-to-end-project
 
-# 🎯 Nexus HR: AI-Augmented HR Analytics MVP
+---
 
-![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)
-![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688.svg)
-![React](https://img.shields.io/badge/React-18.0-61DAFB.svg)
-![AI](https://img.shields.io/badge/AI-Groq%20Llama%203.3-FF9900.svg)
-![Deployed](https://img.shields.io/badge/Deployed-Vercel%20%7C%20Railway-success.svg)
+# 🚀 Nexus HR — AI-Augmented HR Analytics Platform
 
+🔗 Live Demo: [https://nexus-hr-ai.vercel.app/](https://nexus-hr-ai.vercel.app/)
 
+Nexus HR, HR verilerini analiz eden, risk skorlayan ve yapay zekâ destekli yönetici içgörüleri üreten uçtan uca bir HR analytics sistemidir.
 
-🔗 **Live Demo:** [Nexus HR Dashboard'u İncele] https://nexus-hr-ai.vercel.app
-Not: Backend ücretsiz Railway sunucusunda çalıştığı için ilk isteklerde uyanması 30-40 saniye sürebilir.
+Proje, “Yazılım Gereksinimleri ve Analizi” dersi kapsamında başlayan bir fikrin, yazılım mühendisliği prensipleriyle çalışan bir sistem prototipine dönüştürülmüş halidir.
 
+---
 
-📌 Project Context & Overview
+## 🎯 Amaç
 
-Nexus HR is a full-stack analytics system that transforms structured HR datasets into computed metrics and LLM-generated executive summaries.
+Bu sistem, geleneksel HR veri yapılarının ötesine geçerek:
 
-Background:
-The project originated as a Software Requirements Analysis assignment focused on documentation and system design. It was extended into a working prototype to validate the architecture through implementation.
+* Veriyi analiz edilebilir hale getirmek
+* KPI üretimini otomatikleştirmek
+* Çalışan risk skorlaması yapmak
+* Yönetici seviyesinde AI destekli özetler üretmek
 
-🛠️ Data Layer & System Design
+amacıyla tasarlanmıştır.
 
-The system operates on a file-based CSV data source instead of a relational database in its initial version.
+---
 
-Design Rationale:
+## 🧠 Sistem Mimarisi
 
-Eliminates database overhead to prioritize data pipeline development
-Enables rapid iteration on:
-Data cleaning (Pandas-based ETL)
-Feature engineering
-Risk scoring logic
-LLM prompt orchestration
-
-Trade-off:
-
-Reduced scalability and concurrency support
-Improved development velocity and experimental flexibility
-
-
-🧭 Future Architecture Direction
-
-Planned migration toward a relational database layer (PostgreSQL) to support:
-
-Persistent multi-user sessions
-Concurrent data access
-Production-grade CRUD operations
-Scalable analytics workloads
-
-## 🚀 Core Features
-
-* **🧠 AI-Driven Insights:** Integrates with `Llama-3.3-70b-versatile` (via Groq API) to analyze current data states and produce actionable executive summaries.
-* **⚠️ Rule-Based Flight Risk (Churn) Scoring:** A deterministic algorithm identifying high-risk employees using engagement scores, tenure, and project involvement metrics.
-* **📊 Dynamic KPI Engine:** Calculates real-time metrics across departments with strict whitelist validation to ensure data integrity.
-* **🛡️ API Security & Validation:** Implements `SlowAPI` for DDoS protection/rate limiting and `Pydantic` for robust payload validation.
-
-## 📂 Engineering Documentation
-A functional prototype is only as good as its architecture. Moving beyond just code, this MVP is backed by **9 comprehensive Software Engineering reports** created during the design phase:
-1. **Vision & Scope**
-2. **Stakeholder Analysis**
-3. **SRS (Software Requirements Specification)**
-4. **Requirements Classification**
-5. **Analysis Models**
-6. **RTM (Requirements Traceability Matrix)**
-7. **Risk Analysis**
-8. **Prototype Evolution Report**
-9. **Validation & Change Management**
-
-## 🛠️ Technology Stack & Architecture
-Architecture Diagram
-```text
-        CSV Upload
-             │
-             ▼
-        FastAPI API
-             │
-             ▼
-      Pandas ETL Engine
-             │
-             ▼
-   KPI & Risk Scoring Engine
-             │
-      ┌──────┴──────┐
-      ▼             ▼
- Groq LLM      REST API
-      │             │
-      └──────┬──────┘
-             ▼
-     React Dashboard
+```
+CSV Upload
+     │
+     ▼
+FastAPI API Layer
+     │
+     ▼
+Pandas ETL Engine
+     │
+     ▼
+KPI & Risk Scoring Engine
+     │
+ ┌───┴───────────┐
+ ▼               ▼
+Groq LLM     REST API Layer
+ │               │
+ └──────┬────────┘
+        ▼
+   React Dashboard
 ```
 
-### Backend (Data Engine & AI)
-* **Framework:** FastAPI (Python)
-* **Data Processing:** Pandas, NumPy (Includes ETL pipelines and `log1p` salary normalization)
-* **AI Integration:** Groq API (Prompt Engineering with a C-level executive persona)
-* **Testing:** Pytest (Unit & Integration tests)
+---
 
-### Frontend (Client)
-* **Library:** React.js (Vite)
-* **Visuals:** Recharts & Lucide React Icons
+## 🏗️ Sistem Bileşenleri
 
-###
+### 1. Data Ingestion Layer
 
-## ⚙️ Local Installation
-```bash
-# Clone the repository
-git clone [https://github.com/nuraylaraacar-Seng/Nexus-HR-AI.git](https://github.com/nuraylaraacar-Seng/Nexus-HR-AI.git)
+* CSV dosya yükleme
+* Encoding-safe parsing
+* Dosya boyutu kontrolü (20MB)
 
-# Setup Backend
-cd Backend
-pip install -r requirements.txt
-uvicorn main:app --reload
+### 2. ETL & Data Processing Layer
 
-# Setup Frontend
-cd ../frontend
-npm install
-npm run dev
+* Pandas tabanlı veri temizleme
+* Eksik veri yönetimi
+* Feature engineering (log salary, normalization)
+* Veri tip standardizasyonu
+
+### 3. Analytics Engine
+
+**KPI Engine**
+
+* Temel metrik hesaplama (mean, sum, count)
+* Departman bazlı kırılım
+* Kontrollü metrik sistemi (whitelist)
+
+**Risk Engine**
+
+* Rule-based risk skorlama modeli
+* Salary, performance ve engagement temelli analiz
+
+---
+
+### 4. AI Layer (Groq LLM)
+
+LLM sadece **özetlenmiş ve anonimleştirilmiş veriler** ile çalışır:
+
+* Ham veri gönderilmez
+* Sadece aggregate metrikler iletilir
+* Executive summary üretimi yapılır
+
+Bu yaklaşım veri gizliliğini artırır ve model riskini azaltır.
+
+---
+
+### 5. Cache Layer (Redis - Optional)
+
+* Performans optimizasyonu için Redis cache
+* Kullanılmadığında sistem fallback modda çalışır
+* Sistem Redis bağımlı değildir
+
+---
+
+### 6. API Layer (FastAPI)
+
+* REST API mimarisi
+* Session-based yapı
+* Rate limiting (SlowAPI)
+* Pydantic validation
+
+---
+
+### 7. Frontend Layer (React)
+
+* KPI dashboard
+* Veri görselleştirme (Recharts)
+* AI insight paneli
+* Session bazlı veri akışı
+
+---
+
+## 🔐 Güvenlik & Dayanıklılık
+
+* Path traversal protection
+* 20MB dosya limiti
+* Session isolation (max 500 aktif session)
+* Fail-safe mimari (AI / cache bağımsız)
+* Input validation
+* Rate limiting
+
+---
+
+## 📄 Dokümantasyon
+
+Proje kapsamında şu dokümanlar hazırlanmıştır:
+
+* Software Requirements Specification (SRS)
+* Vision & Scope Document
+* Risk Analysis
+* Requirements Traceability Matrix (RTM)
+
+Bu dokümanlar, sistemin gereksinim odaklı tasarlandığını ve kontrollü şekilde geliştirildiğini gösterir.
+
+---
+
+## ⚙️ Deployment
+
+* Frontend: Vercel
+* Backend: Render
+* Cold start: ~20–40 saniye (free tier)
+
+---
+
+## 🧪 Test & CI/CD
+
+* Pytest unit & integration testleri
+* Mock API test yapısı
+* GitHub Actions CI pipeline
+* Data engine test coverage
+
+---
+
+## 🧠 Tasarım Prensipleri
+
+* Modüler ve katmanlı mimari
+* AI destekli ama AI bağımlı olmayan yapı
+* Fail-safe sistem tasarımı
+* Test edilebilir veri akışı
+* Human-in-the-loop yaklaşımı
+
+---
+
+## 📌 Veri Akışı
+
+CSV → FastAPI → ETL → KPI/Risk Engine → Aggregation → LLM → Dashboard
+
+---
+
+## 🚀 Proje Notu
+
+Bu sistem, veri işleme, analitik hesaplama ve yapay zekâ destekli yorumlama katmanlarını birleştiren modüler bir HR analytics prototipidir.
+
+---
+
+## 📎 Not
+
+Proje bireysel olarak geliştirilmiş ve iteratif şekilde olgunlaştırılmıştır.
+
+---
+
+
+İstersen bir sonraki adımda bunu **GitHub repo görünümüne (badge’ler + screenshot + architecture PNG)** çevirip “gerçek product repo” seviyesine de yükseltebiliriz.
