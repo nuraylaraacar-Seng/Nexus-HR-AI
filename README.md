@@ -1,12 +1,6 @@
 
 
----
 
-Evet, bu önemli bir eksik—deployment güven sinyali veriyor ve repo “gerçek çalışan sistem” algısını ciddi güçlendirir. Ama bunu da abartmadan, doğru badge formatıyla ekleyelim.
-
-Aşağıya **düzeltilmiş ve tamamlanmış header kısmını** veriyorum (direkt README başına koymalık):
-
----
 
 # 🚀 Nexus HR — AI-Augmented HR Analytics Platform
 
