@@ -9,7 +9,7 @@ class HRConsultantAI:
         # Groq API ve Llama 3.3 entegrasyonu. Key yoksa uygulama çökmesin diye available bayrağı kullanıyorum.
         self.api_key   = os.getenv("Llama_API_KEY")
         self.url       = "https://api.groq.com/openai/v1/chat/completions"
-        self.model     = "llama-3.3-70b-versatile"
+        self.model     = "openai/gpt-oss-20b"
         self.available = bool(self.api_key)
 
     def generate_executive_summary(self, risk_data: dict) -> dict:
