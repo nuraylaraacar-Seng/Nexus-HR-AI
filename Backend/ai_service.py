@@ -7,7 +7,7 @@ import pandas as pd
 class HRConsultantAI:
     def __init__(self):
         # Groq API ve Llama 3.3 entegrasyonu. Key yoksa uygulama çökmesin diye available bayrağı kullanıyorum.
-        self.api_key   = os.getenv("")
+        self.api_key   = os.getenv("GROQ_API_KEY")
         self.url       = "https://api.groq.com/openai/v1/chat/completions"
         self.model = os.getenv("AI_MODEL", "openai/gpt-oss-20b")
         self.available = bool(self.api_key)
