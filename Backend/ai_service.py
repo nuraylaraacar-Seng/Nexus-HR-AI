@@ -73,7 +73,53 @@ class HRConsultantAI:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+prompt = f"""
+You are an expert Data Engineer performing HR dataset schema mapping.
 
+Your task is to map incoming CSV columns to our standard HR schema.
+
+TARGET SCHEMA
+Required columns:
+{', '.join(required_cols)}
+
+Optional columns:
+{', '.join(optional_cols)}
+
+INCOMING DATASET
+{schema_text}
+
+RULES
+1. Map a target only to a column that actually exists in the incoming dataset.
+2. Never invent a column name.
+3. Use the semantic meaning and data type of the columns.
+4. Salary should map to a salary/compensation column.
+5. Department should map to a department/business-unit column.
+6. Termd should map to termination/terminated status data.
+7. EngagementSurvey should map to employee engagement/survey score data.
+8. If a target cannot be identified confidently, return null.
+9. Return ONLY a valid JSON object. Do not include markdown formatting or explanations.
+"""
+
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a precise HR data schema mapping engine. Output ONLY valid JSON."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.0,
+            "max_tokens": 500,
+            # reasoning_effort sildik.
+            # strict json_schema yerine evrensel json_object kullandık.
+            "response_format": {
+                "type": "json_object"
+            }
+        }
         try:
             response = requests.post(self.url, json=payload, headers=headers, timeout=60)
 
