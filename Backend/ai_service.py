@@ -118,79 +118,77 @@ class HRConsultantAI:
             
         if sample.nunique() < (sample_size * 0.3): return "categorical"
         return "text"
+        
+    def infer_unknown_columns(
+        self,
+        df: pd.DataFrame,
+        required_cols: list,
+        optional_cols: list
+    ) -> dict:
 
-def infer_unknown_columns(
-    self,
-    df: pd.DataFrame,
-    required_cols: list,
-    optional_cols: list
-) -> dict:
+        if not self.available or df.empty:
+            return {}
 
-    if not self.available or df.empty:
-        return {}
+        actual_cols = list(df.columns)
 
-    actual_cols = list(df.columns)
+        schema_info = []
 
-    schema_info = []
+        for col in actual_cols:
+            inferred_type = self._profile_column_pandas(df[col])
 
-    for col in actual_cols:
-        inferred_type = self._profile_column_pandas(df[col])
+            # KVKK güvenliği gereği
+            if inferred_type == "text":
+                safe_values = ["[KVKK GEREĞİ GİZLENDİ]"]
 
-        # KVKK güvenliği sağlanıyor
-        if inferred_type == "text":
-            safe_values = ["[KVKK GEREĞİ GİZLENDİ]"]
+            # Hassas sayısal değerleri doğrudan göndermiyoruz
+            elif inferred_type == "numeric":
+                safe_values = [
+                    f"Range: {df[col].min()} to {df[col].max()}"
+                ]
 
-        # Hassas sayısal değerleri doğrudan göndermiyorum
-        elif inferred_type == "numeric":
-            safe_values = [
-                f"Range: {df[col].min()} to {df[col].max()}"
-            ]
+            else:
+                safe_values = (
+                    df[col]
+                    .dropna()
+                    .value_counts()
+                    .head(3)
+                    .index
+                    .tolist()
+                )
 
-        else:
-            safe_values = (
-                df[col]
-                .dropna()
-                .value_counts()
-                .head(3)
-                .index
-                .tolist()
+            schema_info.append(
+                f"- Column: '{col}' | "
+                f"Type: {inferred_type} | "
+                f"Samples: {safe_values}"
             )
 
-        schema_info.append(
-            f"- Column: '{col}' | "
-            f"Type: {inferred_type} | "
-            f"Samples: {safe_values}"
-        )
+        schema_text = "\n".join(schema_info)
 
-    schema_text = "\n".join(schema_info)
+        all_targets = required_cols + optional_cols
 
-    all_targets = required_cols + optional_cols
+        properties = {}
 
-    # Her hedef kolon için sadece gerçek CSV kolonlarından
-    # biri veya null döndürülebilir.
-    properties = {}
+        for target in all_targets:
+            properties[target] = {
+                "anyOf": [
+                    {
+                        "type": "string",
+                        "enum": actual_cols
+                    },
+                    {
+                        "type": "null"
+                    }
+                ]
+            }
 
-    for target in all_targets:
-        properties[target] = {
-            "anyOf": [
-                {
-                    "type": "string",
-                    "enum": actual_cols
-                },
-                {
-                    "type": "null"
-                }
-            ]
+        mapping_schema = {
+            "type": "object",
+            "properties": properties,
+            "required": all_targets,
+            "additionalProperties": False
         }
 
-    mapping_schema = {
-        "type": "object",
-        "properties": properties,
-        "required": all_targets,
-        "additionalProperties": False
-    }
-
-    prompt = f"""
+        prompt = f"""
 You are an expert Data Engineer performing HR dataset schema mapping.
 
 Your task is to map incoming CSV columns to our standard HR schema.
@@ -218,92 +216,91 @@ RULES
 9. Return the mapping according to the provided JSON schema.
 """
 
-    payload = {
-        "model": self.model,
-        "messages": [
-            {
-                "role": "system",
-                "content": (
-                    "You are a precise HR data schema mapping engine. "
-                    "Return only the requested structured output."
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a precise HR data schema mapping engine. "
+                        "Return only the requested structured output."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.0,
+            "max_tokens": 500,
+            "reasoning_effort": "low",
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "hr_schema_mapping",
+                    "strict": True,
+                    "schema": mapping_schema
+                }
+            }
+        }
+
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
+            response = requests.post(
+                self.url,
+                json=payload,
+                headers=headers,
+                timeout=30
+            )
+
+            if response.status_code != 200:
+                logging.error(
+                    f"Schema Agent API hatası "
+                    f"{response.status_code}: {response.text[:1000]}"
                 )
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "temperature": 0.0,
-        "max_tokens": 500,
-        "reasoning_effort": "low",
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "hr_schema_mapping",
-                "strict": True,
-                "schema": mapping_schema
-            }
-        }
-    }
+                return {}
 
-    try:
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
+            data = response.json()
+            content = data["choices"][0]["message"]["content"]
 
-        response = requests.post(
-            self.url,
-            json=payload,
-            headers=headers,
-            timeout=30
-        )
+            logging.info(
+                f"Schema Agent mapping response: {content}"
+            )
 
-        if response.status_code != 200:
+            raw_mapping = json.loads(content)
+
+            # Güvenlik katmanı: yalnızca gerçek CSV kolonlarını kabul eder..
+            validated_mapping = {}
+
+            for target, source in raw_mapping.items():
+
+                if target not in all_targets:
+                    continue
+
+                if source is None:
+                    continue
+
+                if source in actual_cols:
+                    validated_mapping[target] = source
+
+            return validated_mapping
+
+        except requests.exceptions.Timeout:
+            logging.error("Schema Agent API timeout")
+            return {}
+
+        except json.JSONDecodeError as e:
             logging.error(
-                f"Schema Agent API hatası "
-                f"{response.status_code}: {response.text[:1000]}"
+                f"Schema Agent JSON parse hatası: {e}"
             )
             return {}
 
-        data = response.json()
-
-        content = data["choices"][0]["message"]["content"]
-
-        logging.info(
-            f"Schema Agent mapping response: {content}"
-        )
-
-        raw_mapping = json.loads(content)
-
-        # Ek güvenlik ayarı: yalnızca gerçek CSV kolonlarını kabul eder.
-        validated_mapping = {}
-
-        for target, source in raw_mapping.items():
-
-            if target not in all_targets:
-                continue
-
-            if source is None:
-                continue
-
-            if source in actual_cols:
-                validated_mapping[target] = source
-
-        return validated_mapping
-
-    except requests.exceptions.Timeout:
-        logging.error("Schema Agent API timeout")
-        return {}
-
-    except json.JSONDecodeError as e:
-        logging.error(
-            f"Schema Agent JSON parse hatası: {e}"
-        )
-        return {}
-
-    except Exception as e:
-        logging.error(
-            f"Schema Agent Exception: {e}"
-        )
-        return {}
+        except Exception as e:
+            logging.error(
+                f"Schema Agent Exception: {e}"
+            )
+            return {}
