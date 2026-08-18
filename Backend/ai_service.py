@@ -123,7 +123,8 @@ class HRConsultantAI:
         
     def infer_unknown_columns(self, df: pd.DataFrame, required_cols: list, optional_cols: list) -> dict:
         """
-        LLM kullanarak dinamik şema haritalandırması yapar.
+        LLM kullanarak TAM OTONOM (Zero-Touch) şema haritalandırması yapar.
+        Kullanıcıya modal göstermemek için LLM'i zorunlu seçim yapmaya iter.
         """
         if not self.available or df.empty:
             return {}
@@ -148,11 +149,14 @@ class HRConsultantAI:
         all_targets = required_cols + optional_cols
 
         prompt = f"""
-You are an expert HR Data Architecture AI.
-Your objective is to map incoming, unstructured CSV columns to our standard HR target schema.
+You are an elite AI Data Architect. Your mission is 100% AUTONOMOUS schema mapping.
+The system requires zero human intervention.
 
-TARGET SCHEMA (Required & Optional):
-{all_targets}
+TARGET REQUIRED COLUMNS (MUST be mapped, NEVER use null):
+{', '.join(required_cols)}
+
+TARGET OPTIONAL COLUMNS (Can be null only if completely irrelevant):
+{', '.join(optional_cols)}
 
 AVAILABLE CSV COLUMNS:
 {actual_cols}
@@ -160,18 +164,14 @@ AVAILABLE CSV COLUMNS:
 DATASET SAMPLES & TYPES:
 {schema_text}
 
-MISSION RULES:
-1. SEMANTIC INFERENCE: Do NOT just look at column names. Analyze the data types and the provided samples deeply.
-   - If a column's samples represent monetary values or salary bands, map it to the compensation/salary target.
-   - If the samples show organizational units or work groups, map it to the department/business-unit target.
-   - If the samples indicate employment status (active, separated, boolean flags), map it to the termination/attrition target.
-   - Use your vast knowledge of HR analytics to make the most logical connection between the sample data and the target schema.
-2. You MUST pick the exact column name from the AVAILABLE CSV COLUMNS list. Do not invent names.
-3. If there is absolutely no logical match for a target, return null.
-4. Output ONLY a valid JSON object. No markdown, no explanations.
+AUTONOMY RULES:
+1. ZERO HUMAN INTERVENTION: For the REQUIRED COLUMNS, you must forcefully deduce the best possible match from the available columns. Look at data types and samples. 
+2. NEVER RETURN NULL FOR A REQUIRED COLUMN. Make your best educated guess.
+3. You must select the exact string from the AVAILABLE CSV COLUMNS list.
+4. Output ONLY a valid JSON object. No explanations, no markdown.
 
 Example format:
-{{"TargetColumnName": "Actual_CSV_Column_Name", "AnotherTarget": null}}
+{{"Salary": "MonthlyIncome", "Department": "Dept", "Termd": "Attrition"}}
 """
 
         payload = {
@@ -179,14 +179,14 @@ Example format:
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a precise HR data schema mapping engine. You must output ONLY a valid JSON object. Do not include any text before or after the JSON."
+                    "content": "You are an autonomous HR mapping engine. Output ONLY valid JSON."
                 },
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-            "temperature": 0.0,
+            "temperature": 0.1,
             "max_tokens": 500
         }
 
@@ -206,32 +206,28 @@ Example format:
             message_content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
             if not message_content:
-                logging.error("Groq API başarılı yanıt verdi fakat içerik (content) BOŞ döndü.")
+                logging.error("Groq API başarılı yanıt verdi fakat içerik BOŞ döndü.")
                 return {}
 
             cleaned_content = message_content.replace("```json", "").replace("```", "").strip()
-            logging.info(f"Schema Agent mapping response: {cleaned_content}")
-
-            if not cleaned_content:
-                logging.error("Temizlik işleminden sonra JSON içeriği boş kaldı.")
-                return {}
-
             raw_mapping = json.loads(cleaned_content)
 
-            # Güvenlik katmanı: yalnızca gerçek CSV kolonlarını kabul eder.
+            # --- TOLERANS KATMANI ---
+            # AI inisiyatif alıp ufak harf/boşluk hatası yapsa bile veriyi çöpe atma.
+            clean_actual_cols = {col.strip().lower(): col for col in actual_cols}
+
             validated_mapping = {}
             for target, source in raw_mapping.items():
-                if target in all_targets and source in actual_cols:
-                    validated_mapping[target] = source
+                if not source or not isinstance(source, str):
+                    continue
+                
+                clean_source = source.strip().lower()
+                if target in all_targets and clean_source in clean_actual_cols:
+                    validated_mapping[target] = clean_actual_cols[clean_source]
 
+            logging.info(f"Otonom Eşleştirme Başarılı: {validated_mapping}")
             return validated_mapping
 
-        except requests.exceptions.Timeout:
-            logging.error("Schema Agent API timeout")
-            return {}
-        except json.JSONDecodeError as e:
-            logging.error(f"Schema Agent JSON parse hatası: {e}. Gelen İçerik: '{cleaned_content}'")
-            return {}
         except Exception as e:
             logging.error(f"Schema Agent Exception: {e}")
             return {}
