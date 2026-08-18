@@ -188,61 +188,7 @@ class HRConsultantAI:
             "additionalProperties": False
         }
 
-        prompt = f"""
-You are an expert Data Engineer performing HR dataset schema mapping.
 
-Your task is to map incoming CSV columns to our standard HR schema.
-
-TARGET SCHEMA
-Required columns:
-{', '.join(required_cols)}
-
-Optional columns:
-{', '.join(optional_cols)}
-
-INCOMING DATASET
-{schema_text}
-
-RULES
-
-1. Map a target only to a column that actually exists in the incoming dataset.
-2. Never invent a column name.
-3. Use the semantic meaning and data type of the columns.
-4. Salary should map to a salary/compensation column.
-5. Department should map to a department/business-unit column.
-6. Termd should map to termination/terminated status data.
-7. EngagementSurvey should map to employee engagement/survey score data.
-8. If a target cannot be identified confidently, return null.
-9. Return the mapping according to the provided JSON schema.
-"""
-
-        payload = {
-            "model": self.model,
-            "messages": [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a precise HR data schema mapping engine. "
-                        "Return only the requested structured output."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "temperature": 0.0,
-            "max_tokens": 500,
-            "reasoning_effort": "low",
-            "response_format": {
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "hr_schema_mapping",
-                    "strict": True,
-                    "schema": mapping_schema
-                }
-            }
-        }
 
         try:
             headers = {
