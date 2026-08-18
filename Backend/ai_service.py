@@ -148,32 +148,30 @@ class HRConsultantAI:
         all_targets = required_cols + optional_cols
 
         prompt = f"""
-You are an elite Data Detective and HR AI Agent. 
-Your ONLY job is to map incoming dirty CSV columns to our standard HR schema.
+You are an expert HR Data Architecture AI.
+Your objective is to map incoming, unstructured CSV columns to our standard HR target schema.
 
-TARGET SCHEMA
-Required columns:
-{', '.join(required_cols)}
+TARGET SCHEMA (Required & Optional):
+{all_targets}
 
-Optional columns:
-{', '.join(optional_cols)}
+AVAILABLE CSV COLUMNS:
+{actual_cols}
 
-INCOMING DATASET (Pay close attention to Types and Samples!)
+DATASET SAMPLES & TYPES:
 {schema_text}
 
-CRITICAL DEDUCTION RULES:
-1. IGNORE WEIRD COLUMN NAMES. A column might be named "Adem", "XYZ", or "Var1". Do not rely on the name alone.
-2. DEDUCE FROM SAMPLES: Look at the "Samples" and "Type" provided for each column.
-   - If a column has numeric ranges like 30,000 to 150,000, it is DEFINITELY the "Salary" or "MonthlyIncome" column, regardless of its name.
-   - If a column contains binary data (0/1, Yes/No, True/False) or terms like "Voluntary", "Fired", it is DEFINITELY the "Attrition" or "Termd" column.
-   - If a column contains text like "Sales", "IT", "Engineering", it is the "Department" column.
-   - If a column contains scores (e.g., 1 to 5), it is likely the "EngagementSurvey" or performance score.
-3. Map a target ONLY to an exact column name that exists in the INCOMING DATASET list.
-4. Never invent a column name.
-5. Output your response entirely in valid JSON format.
+MISSION RULES:
+1. SEMANTIC INFERENCE: Do NOT just look at column names. Analyze the data types and the provided samples deeply.
+   - If a column's samples represent monetary values or salary bands, map it to the compensation/salary target.
+   - If the samples show organizational units or work groups, map it to the department/business-unit target.
+   - If the samples indicate employment status (active, separated, boolean flags), map it to the termination/attrition target.
+   - Use your vast knowledge of HR analytics to make the most logical connection between the sample data and the target schema.
+2. You MUST pick the exact column name from the AVAILABLE CSV COLUMNS list. Do not invent names.
+3. If there is absolutely no logical match for a target, return null.
+4. Output ONLY a valid JSON object. No markdown, no explanations.
 
-Example JSON output format:
-{{"Salary": "Adem_veya_farkli_isim", "Department": "Dept", "Termd": "Status_Column"}}
+Example format:
+{{"TargetColumnName": "Actual_CSV_Column_Name", "AnotherTarget": null}}
 """
 
         payload = {
