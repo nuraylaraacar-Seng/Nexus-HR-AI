@@ -77,7 +77,6 @@ class HRConsultantAI:
         }
 
         try:
-            # İşlemi hızlandırmak için timeout 15 saniyeye çekildi.
             response = requests.post(self.url, json=payload, headers=headers, timeout=15)
 
             if response.status_code != 200:
@@ -146,7 +145,7 @@ class HRConsultantAI:
         schema_text = "\n".join(schema_info)
         all_targets = required_cols + optional_cols
 
-prompt = f"""
+        prompt = f"""
 You are an expert Data Engineer performing HR dataset schema mapping.
 
 Your task is to map incoming CSV columns to our standard HR schema.
@@ -177,24 +176,24 @@ Example JSON output format:
 {{"Salary": "MonthlyIncome", "Department": "Dept", "Termd": null}}
 """
 
-payload = {
-    "model": self.model,
-    "messages": [
-        {
-            "role": "system",
-            "content": "You are a precise HR data schema mapping engine. You must respond with a valid JSON object only."
-        },
-        {
-            "role": "user",
-            "content": prompt
+        payload = {
+            "model": self.model,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a precise HR data schema mapping engine. You must respond with a valid JSON object only."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "temperature": 0.0,
+            "max_tokens": 500,
+            "response_format": {
+                "type": "json_object"
+            }
         }
-    ],
-    "temperature": 0.0,
-    "max_tokens": 500,
-    "response_format": {
-        "type": "json_object"
-    }
-}
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
