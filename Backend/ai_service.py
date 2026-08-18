@@ -9,8 +9,7 @@ class HRConsultantAI:
         # Groq API entegrasyonu. Key yoksa uygulama çökmesin diye available bayrağı kullanılıyor.
         self.api_key = os.getenv("GROQ_API_KEY")
         self.url = "https://api.groq.com/openai/v1/chat/completions"
-
-self.model = os.getenv("AI_MODEL", "gpt-oss-120b")
+        self.model = os.getenv("AI_MODEL", "gpt-oss-120b")
         self.available = bool(self.api_key)
 
     def generate_executive_summary(self, risk_data: dict) -> dict:
