@@ -20,42 +20,34 @@ class HRConsultantAI:
         if not self.available:
             return {"error": "AI servisi şu anda devre dışı."}
 
-        prompt = f"""
-        [ROLE]
-        You are a Senior Managing Partner at a top-tier global management consultancy (McKinsey, BCG, or Bain).
-        Your expertise lies in Strategic Human Capital Management and Organizational Resilience.
+       prompt = f"""
+You are an elite Data Detective and HR AI Agent. 
+Your ONLY job is to map incoming dirty CSV columns to our standard HR schema.
 
-        [CONTEXT]
-        You are reviewing the "Nexus HR" analytics dashboard for a high-growth enterprise.
-        The CHRO and Board of Directors expect a high-stakes, data-driven assessment.
+TARGET SCHEMA
+Required columns:
+{', '.join(required_cols)}
 
-        [DATASET SNAPSHOT]
-        - Total Headcount: {risk_data.get('total_employees', 'N/A')}
-        - Financial Baseline (Avg Salary): ${risk_data.get('average_salary', 'N/A')}
-        - Talent Leakage Risk: {risk_data.get('flight_risk_count', 'Analiz Edilemedi')} employees identified as High Risk.
-        - Employee Sentiment: {risk_data.get('average_engagement', 'N/A')}/5.0 Engagement Score.
+Optional columns:
+{', '.join(optional_cols)}
 
-        [STRICT DELIVERABLE STRUCTURE - RESPONSE MUST BE IN TURKISH]
+INCOMING DATASET (Pay close attention to Types and Samples!)
+{schema_text}
 
-        1. Stratejik Durum Değerlendirmesi
-        - Organizasyon sağlığını 2-3 güçlü cümleyle özetle.
-        - Bağlılık skorunu yetenek kaybı riskiyle doğrudan ilişkilendir.
+CRITICAL DEDUCTION RULES:
+1. IGNORE WEIRD COLUMN NAMES. A column might be named "Adem", "XYZ", or "Var1". Do not rely on the name alone.
+2. DEDUCE FROM SAMPLES: Look at the "Samples" and "Type" provided for each column.
+   - If a column has numeric ranges like 30,000 to 150,000, it is DEFINITELY the "Salary" or "MonthlyIncome" column, regardless of its name.
+   - If a column contains binary data (0/1, Yes/No, True/False) or terms like "Voluntary", "Fired", it is DEFINITELY the "Attrition" or "Termd" column.
+   - If a column contains text like "Sales", "IT", "Engineering", it is the "Department" column.
+   - If a column contains scores (e.g., 1 to 5), it is likely the "EngagementSurvey" or performance score.
+3. Map a target ONLY to an exact column name that exists in the INCOMING DATASET list.
+4. Never invent a column name.
+5. Output your response entirely in valid JSON format.
 
-        2. Kritik Veri Matrisi
-        - Veriyi analitik ağırlıkla sun.
-
-        3. Derinlemesine Risk Analizi
-        - Yüksek riskli çalışan kaybının finansal etkisini hesapla.
-        - Hangi departmanların "Stratejik Kırmızı Bölge" teşkil ettiğini belirt.
-
-        4. C-Level Aksiyon Planı
-        - 3-4 kararlı, yüksek etkili öneri sun.
-        - "Kritik öncelik taşımaktadır", "ivedilikle uygulanmalıdır" gibi ifadeler kullan.
-
-        [CONSTRAINTS]
-        - Dil: YALNIZCA TÜRKÇE.
-        - Ton: Soğuk, profesyonel, veri merkezli, otoriter. Gereksiz dolgu yok.
-        """
+Example JSON output format:
+{{"Salary": "Adem_veya_farkli_isim", "Department": "Dept", "Termd": "Status_Column"}}
+"""
         
         payload = {
             "model": self.model,
