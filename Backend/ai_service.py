@@ -181,7 +181,7 @@ Example JSON output format:
             "messages": [
                 {
                     "role": "system",
-                    "content": "You are a precise HR data schema mapping engine. You must respond with a valid JSON object only."
+                    "content": "You are a precise HR data schema mapping engine. You must output ONLY a valid JSON object. Do not include any text before or after the JSON."
                 },
                 {
                     "role": "user",
@@ -189,10 +189,7 @@ Example JSON output format:
                 }
             ],
             "temperature": 0.0,
-            "max_tokens": 500,
-            "response_format": {
-                "type": "json_object"
-            }
+            "max_tokens": 500
         }
 
         headers = {
@@ -201,6 +198,11 @@ Example JSON output format:
         }
 
         try:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
             response = requests.post(self.url, json=payload, headers=headers, timeout=15)
 
             if response.status_code != 200:
@@ -208,9 +210,14 @@ Example JSON output format:
                 return {}
 
             data = response.json()
+
             content = data["choices"][0]["message"]["content"]
 
+            content = content.replace("```json", "").replace("```", "").strip()
+            
             logging.info(f"Schema Agent mapping response: {content}")
+            
+
             raw_mapping = json.loads(content)
 
             # Güvenlik katmanı: yalnızca gerçek CSV kolonlarını kabul eder.
