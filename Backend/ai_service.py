@@ -6,7 +6,7 @@ import pandas as pd
 
 class HRConsultantAI:
     def __init__(self):
-        # Groq API ve Llama 3.3 entegrasyonu. Key yoksa uygulama çökmesin diye available bayrağı kullanıyorum.
+        # Groq API  entegrasyonu. Key yoksa uygulama çökmesin diye available bayrağı kullanıyorum.
         self.api_key   = os.getenv("GROQ_API_KEY")
         self.url       = "https://api.groq.com/openai/v1/chat/completions"
         self.model = os.getenv("AI_MODEL", "openai/gpt-oss-20b")
@@ -119,65 +119,191 @@ class HRConsultantAI:
         if sample.nunique() < (sample_size * 0.3): return "categorical"
         return "text"
 
-    def infer_unknown_columns(self, df: pd.DataFrame, required_cols: list, optional_cols: list) -> dict:
-        if not self.available or df.empty:
-            return {}
+def infer_unknown_columns(
+    self,
+    df: pd.DataFrame,
+    required_cols: list,
+    optional_cols: list
+) -> dict:
 
-        schema_info = []
-        for col in df.columns:
-            inferred_type = self._profile_column_pandas(df[col])
-            
-            # Veri güvenliği her şeydir. KVKK ihlali olmasın diye LLM'e gitmeden önce veriyi maskeliyorum.
-            # İsim veya hassas veri olma ihtimaline karşı metinleri tamamen gizliyorum.
-            if inferred_type == "text":
-                safe_values = ["[KVKK GEREĞİ GİZLENDİ]"]
-            # Sayısal verilerde (örn: maaş) nokta atışı değer yollamak yerine sadece minimum-maksimum aralığını belirtiyorum.
-            elif inferred_type == "numeric":
-                safe_values = [f"Range: {df[col].min()} to {df[col].max()}"]
-            else:
-                safe_values = df[col].dropna().value_counts().head(3).index.tolist()
+    if not self.available or df.empty:
+        return {}
 
-            schema_info.append(f"- Column: '{col}' | Type: {inferred_type} | Samples: {safe_values}")
-        
-        schema_text = "\n".join(schema_info)
+    actual_cols = list(df.columns)
 
-        # LLM'in kafasına göre eşleştirme yapmasını engellemek için kuralları katı tuttum.
-        prompt = f"""
-You are an expert Data Engineer. Map an unknown HR dataset's columns to our standard schema.
+    schema_info = []
 
-[TARGET SCHEMA]
-Required: {', '.join(required_cols)}
-Optional: {', '.join(optional_cols)}
+    for col in actual_cols:
+        inferred_type = self._profile_column_pandas(df[col])
 
-[CRITICAL RULE]
-Do not map numeric columns to categorical targets (like PerformanceScore). Leave unmapped if unsure.
+        # KVKK güvenliği sağlanıyor
+        if inferred_type == "text":
+            safe_values = ["[KVKK GEREĞİ GİZLENDİ]"]
 
-[INCOMING DATASET]
-{schema_text}
+        # Hassas sayısal değerleri doğrudan göndermiyorum
+        elif inferred_type == "numeric":
+            safe_values = [
+                f"Range: {df[col].min()} to {df[col].max()}"
+            ]
 
-Return ONLY a valid JSON object where keys are the Target Schema columns and values are the Incoming Column names.
-"""
-        payload = {
-            "model": self.model,
-            "messages": [
-                {"role": "system", "content": "You are a precise JSON-only API. Strictly follow data types."},
-                {"role": "user", "content": prompt}
-            ],
-            "temperature": 0.0,
-            "max_tokens": 500,
-            "response_format": {"type": "json_object"}
+        else:
+            safe_values = (
+                df[col]
+                .dropna()
+                .value_counts()
+                .head(3)
+                .index
+                .tolist()
+            )
+
+        schema_info.append(
+            f"- Column: '{col}' | "
+            f"Type: {inferred_type} | "
+            f"Samples: {safe_values}"
+        )
+
+    schema_text = "\n".join(schema_info)
+
+    all_targets = required_cols + optional_cols
+
+    # Her hedef kolon için sadece gerçek CSV kolonlarından
+    # biri veya null döndürülebilir.
+    properties = {}
+
+    for target in all_targets:
+        properties[target] = {
+            "anyOf": [
+                {
+                    "type": "string",
+                    "enum": actual_cols
+                },
+                {
+                    "type": "null"
+                }
+            ]
         }
 
-        try:
-            headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
-            response = requests.post(self.url, json=payload, headers=headers, timeout=15)
-            
-            if response.status_code == 200:
-                data = response.json()
-                return json.loads(data["choices"][0]["message"]["content"])
-            else:
-                logging.error(f"Schema Agent API hatası: {response.text}")
-                return {}
-        except Exception as e:
-            logging.error(f"Schema Agent Exception: {e}")
+    mapping_schema = {
+        "type": "object",
+        "properties": properties,
+        "required": all_targets,
+        "additionalProperties": False
+    }
+
+    prompt = f"""
+You are an expert Data Engineer performing HR dataset schema mapping.
+
+Your task is to map incoming CSV columns to our standard HR schema.
+
+TARGET SCHEMA
+Required columns:
+{', '.join(required_cols)}
+
+Optional columns:
+{', '.join(optional_cols)}
+
+INCOMING DATASET
+{schema_text}
+
+RULES
+
+1. Map a target only to a column that actually exists in the incoming dataset.
+2. Never invent a column name.
+3. Use the semantic meaning and data type of the columns.
+4. Salary should map to a salary/compensation column.
+5. Department should map to a department/business-unit column.
+6. Termd should map to termination/terminated status data.
+7. EngagementSurvey should map to employee engagement/survey score data.
+8. If a target cannot be identified confidently, return null.
+9. Return the mapping according to the provided JSON schema.
+"""
+
+    payload = {
+        "model": self.model,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a precise HR data schema mapping engine. "
+                    "Return only the requested structured output."
+                )
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0.0,
+        "max_tokens": 500,
+        "reasoning_effort": "low",
+        "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+                "name": "hr_schema_mapping",
+                "strict": True,
+                "schema": mapping_schema
+            }
+        }
+    }
+
+    try:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        response = requests.post(
+            self.url,
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+
+        if response.status_code != 200:
+            logging.error(
+                f"Schema Agent API hatası "
+                f"{response.status_code}: {response.text[:1000]}"
+            )
             return {}
+
+        data = response.json()
+
+        content = data["choices"][0]["message"]["content"]
+
+        logging.info(
+            f"Schema Agent mapping response: {content}"
+        )
+
+        raw_mapping = json.loads(content)
+
+        # Ek güvenlik ayarı: yalnızca gerçek CSV kolonlarını kabul eder.
+        validated_mapping = {}
+
+        for target, source in raw_mapping.items():
+
+            if target not in all_targets:
+                continue
+
+            if source is None:
+                continue
+
+            if source in actual_cols:
+                validated_mapping[target] = source
+
+        return validated_mapping
+
+    except requests.exceptions.Timeout:
+        logging.error("Schema Agent API timeout")
+        return {}
+
+    except json.JSONDecodeError as e:
+        logging.error(
+            f"Schema Agent JSON parse hatası: {e}"
+        )
+        return {}
+
+    except Exception as e:
+        logging.error(
+            f"Schema Agent Exception: {e}"
+        )
+        return {}
