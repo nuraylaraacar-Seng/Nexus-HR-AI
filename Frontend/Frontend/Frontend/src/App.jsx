@@ -33,7 +33,16 @@ const fmtSize = (b) =>
 function MappingModal({ pendingId, datasetColumns, autoDetected, onSuccess, onCancel }) {
   const [mapping, setMapping] = useState(() => {
     const init = {};
-    ALL_COLS.forEach(std => { init[std] = autoDetected[std] || ""; });
+    const normalizedAuto = {};
+    if (autoDetected) {
+      Object.entries(autoDetected).forEach(([k, v]) => {
+        normalizedAuto[k.toLowerCase().trim()] = v;
+      });
+    }
+
+    ALL_COLS.forEach(std => {
+      init[std] = autoDetected[std] || normalizedAuto[std.toLowerCase().trim()] || "";
+    });
     return init;
   });
   const [saving, setSaving] = useState(false);
