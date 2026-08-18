@@ -20,34 +20,42 @@ class HRConsultantAI:
         if not self.available:
             return {"error": "AI servisi şu anda devre dışı."}
 
-       prompt = f"""
-You are an elite Data Detective and HR AI Agent. 
-Your ONLY job is to map incoming dirty CSV columns to our standard HR schema.
+        prompt = f"""
+        [ROLE]
+        You are a Senior Managing Partner at a top-tier global management consultancy (McKinsey, BCG, or Bain).
+        Your expertise lies in Strategic Human Capital Management and Organizational Resilience.
 
-TARGET SCHEMA
-Required columns:
-{', '.join(required_cols)}
+        [CONTEXT]
+        You are reviewing the "Nexus HR" analytics dashboard for a high-growth enterprise.
+        The CHRO and Board of Directors expect a high-stakes, data-driven assessment.
 
-Optional columns:
-{', '.join(optional_cols)}
+        [DATASET SNAPSHOT]
+        - Total Headcount: {risk_data.get('total_employees', 'N/A')}
+        - Financial Baseline (Avg Salary): ${risk_data.get('average_salary', 'N/A')}
+        - Talent Leakage Risk: {risk_data.get('flight_risk_count', 'Analiz Edilemedi')} employees identified as High Risk.
+        - Employee Sentiment: {risk_data.get('average_engagement', 'N/A')}/5.0 Engagement Score.
 
-INCOMING DATASET (Pay close attention to Types and Samples!)
-{schema_text}
+        [STRICT DELIVERABLE STRUCTURE - RESPONSE MUST BE IN TURKISH]
 
-CRITICAL DEDUCTION RULES:
-1. IGNORE WEIRD COLUMN NAMES. A column might be named "Adem", "XYZ", or "Var1". Do not rely on the name alone.
-2. DEDUCE FROM SAMPLES: Look at the "Samples" and "Type" provided for each column.
-   - If a column has numeric ranges like 30,000 to 150,000, it is DEFINITELY the "Salary" or "MonthlyIncome" column, regardless of its name.
-   - If a column contains binary data (0/1, Yes/No, True/False) or terms like "Voluntary", "Fired", it is DEFINITELY the "Attrition" or "Termd" column.
-   - If a column contains text like "Sales", "IT", "Engineering", it is the "Department" column.
-   - If a column contains scores (e.g., 1 to 5), it is likely the "EngagementSurvey" or performance score.
-3. Map a target ONLY to an exact column name that exists in the INCOMING DATASET list.
-4. Never invent a column name.
-5. Output your response entirely in valid JSON format.
+        1. Stratejik Durum Değerlendirmesi
+        - Organizasyon sağlığını 2-3 güçlü cümleyle özetle.
+        - Bağlılık skorunu yetenek kaybı riskiyle doğrudan ilişkilendir.
 
-Example JSON output format:
-{{"Salary": "Adem_veya_farkli_isim", "Department": "Dept", "Termd": "Status_Column"}}
-"""
+        2. Kritik Veri Matrisi
+        - Veriyi analitik ağırlıkla sun.
+
+        3. Derinlemesine Risk Analizi
+        - Yüksek riskli çalışan kaybının finansal etkisini hesapla.
+        - Hangi departmanların "Stratejik Kırmızı Bölge" teşkil ettiğini belirt.
+
+        4. C-Level Aksiyon Planı
+        - 3-4 kararlı, yüksek etkili öneri sun.
+        - "Kritik öncelik taşımaktadır", "ivedilikle uygulanmalıdır" gibi ifadeler kullan.
+
+        [CONSTRAINTS]
+        - Dil: YALNIZCA TÜRKÇE.
+        - Ton: Soğuk, profesyonel, veri merkezli, otoriter. Gereksiz dolgu yok.
+        """
         
         payload = {
             "model": self.model,
@@ -56,7 +64,10 @@ Example JSON output format:
                     "role": "system",
                     "content": "You are a top-tier HR Data Strategist. Turkish only. No fluff."
                 },
-                {"role": "user", "content": prompt}
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ],
             "temperature": 0.3,
             "max_tokens": 1500,
@@ -137,10 +148,8 @@ Example JSON output format:
         all_targets = required_cols + optional_cols
 
         prompt = f"""
-You are an expert Data Engineer performing HR dataset schema mapping.
-
-Your task is to map incoming CSV columns to our standard HR schema.
-You must respond with a valid JSON object.
+You are an elite Data Detective and HR AI Agent. 
+Your ONLY job is to map incoming dirty CSV columns to our standard HR schema.
 
 TARGET SCHEMA
 Required columns:
@@ -149,22 +158,22 @@ Required columns:
 Optional columns:
 {', '.join(optional_cols)}
 
-INCOMING DATASET
+INCOMING DATASET (Pay close attention to Types and Samples!)
 {schema_text}
 
-RULES
-1. Map a target only to a column that actually exists in the incoming dataset.
-2. Never invent a column name.
-3. Use the semantic meaning and data type of the columns.
-4. Salary should map to a salary/compensation column.
-5. Department should map to a department/business-unit column.
-6. Termd should map to termination/terminated status data.
-7. EngagementSurvey should map to employee engagement/survey score data.
-8. If a target cannot be identified confidently, use null.
-9. Respond with a JSON object where keys are the target column names and values are the matched source column names or null.
+CRITICAL DEDUCTION RULES:
+1. IGNORE WEIRD COLUMN NAMES. A column might be named "Adem", "XYZ", or "Var1". Do not rely on the name alone.
+2. DEDUCE FROM SAMPLES: Look at the "Samples" and "Type" provided for each column.
+   - If a column has numeric ranges like 30,000 to 150,000, it is DEFINITELY the "Salary" or "MonthlyIncome" column, regardless of its name.
+   - If a column contains binary data (0/1, Yes/No, True/False) or terms like "Voluntary", "Fired", it is DEFINITELY the "Attrition" or "Termd" column.
+   - If a column contains text like "Sales", "IT", "Engineering", it is the "Department" column.
+   - If a column contains scores (e.g., 1 to 5), it is likely the "EngagementSurvey" or performance score.
+3. Map a target ONLY to an exact column name that exists in the INCOMING DATASET list.
+4. Never invent a column name.
+5. Output your response entirely in valid JSON format.
 
 Example JSON output format:
-{{"Salary": "MonthlyIncome", "Department": "Dept", "Termd": null}}
+{{"Salary": "Adem_veya_farkli_isim", "Department": "Dept", "Termd": "Status_Column"}}
 """
 
         payload = {
@@ -189,11 +198,6 @@ Example JSON output format:
         }
 
         try:
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-
             response = requests.post(self.url, json=payload, headers=headers, timeout=15)
 
             if response.status_code != 200:
@@ -201,15 +205,20 @@ Example JSON output format:
                 return {}
 
             data = response.json()
+            message_content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
 
-            content = data["choices"][0]["message"]["content"]
+            if not message_content:
+                logging.error("Groq API başarılı yanıt verdi fakat içerik (content) BOŞ döndü.")
+                return {}
 
-            content = content.replace("```json", "").replace("```", "").strip()
-            
-            logging.info(f"Schema Agent mapping response: {content}")
-            
+            cleaned_content = message_content.replace("```json", "").replace("```", "").strip()
+            logging.info(f"Schema Agent mapping response: {cleaned_content}")
 
-            raw_mapping = json.loads(content)
+            if not cleaned_content:
+                logging.error("Temizlik işleminden sonra JSON içeriği boş kaldı.")
+                return {}
+
+            raw_mapping = json.loads(cleaned_content)
 
             # Güvenlik katmanı: yalnızca gerçek CSV kolonlarını kabul eder.
             validated_mapping = {}
@@ -223,7 +232,7 @@ Example JSON output format:
             logging.error("Schema Agent API timeout")
             return {}
         except json.JSONDecodeError as e:
-            logging.error(f"Schema Agent JSON parse hatası: {e}")
+            logging.error(f"Schema Agent JSON parse hatası: {e}. Gelen İçerik: '{cleaned_content}'")
             return {}
         except Exception as e:
             logging.error(f"Schema Agent Exception: {e}")
