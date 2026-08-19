@@ -3,7 +3,8 @@ Nexus HR: Enterprise AI Dashboard API v2.1
 Mimari Notlarım:
 - Session-Based Memory Management (Oturuma özel bellek yönetimi)
 - LLM-Powered Schema Mapping (Groq API, Pandas Profiling ve KVKK Kalkanı ile akıllı eşleştirme)
-- Zero-Touch Autonomous Fallback & Data Cleansing (Manuel modalı tarihe gömen otonom katman)
+- Zero-Touch Autonomous Fallback & Data Cleansing (Manuel modalı tarihe gömen otonom katman)  
+-eklendi 
 """
 
 import os, uuid, logging
