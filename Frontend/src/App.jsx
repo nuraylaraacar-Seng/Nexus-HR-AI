@@ -488,8 +488,7 @@ const ms = {
   closeBtn:  { background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: 4, borderRadius: 6, flexShrink: 0 },
  
   row:       { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, border: '1px solid #e2e8f0', transition: 'all .15s' },
-  leftCol:   { display: 'flex', flexDirection: 'column', minWidth: 170, flexShrink: 0 },
-  select:    { flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff', outline: 'none', cursor: 'pointer' },
+  leftCol:   { display: 'flex', flexDirection: 'column', minWidth: 170, flexShrink: 0 }, 
   err:       { margin: '10px 24px 0', padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, color: '#b91c1c', fontSize: 13 },
   foot:      { display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 24px 18px', borderTop: '1px solid #e2e8f0', marginTop: 12 },
   cancelBtn: { padding: '9px 20px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 9, fontSize: 14, cursor: 'pointer', fontWeight: 500 },
