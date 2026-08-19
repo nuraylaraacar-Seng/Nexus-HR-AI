@@ -486,7 +486,7 @@ const ms = {
   modal:     { background: '#fff', borderRadius: 18, width: '100%', maxWidth: 660, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 60px rgba(0,0,0,.25)' },
   head:      { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', padding: '20px 24px 12px' },
   closeBtn:  { background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', padding: 4, borderRadius: 6, flexShrink: 0 },
-  body:      { overflowY: 'auto', padding: '0 24px 4px', display: 'flex', flexDirection: 'column', gap: 7 },
+ 
   row:       { display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 10, border: '1px solid #e2e8f0', transition: 'all .15s' },
   leftCol:   { display: 'flex', flexDirection: 'column', minWidth: 170, flexShrink: 0 },
   select:    { flex: 1, padding: '7px 10px', borderRadius: 8, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff', outline: 'none', cursor: 'pointer' },
