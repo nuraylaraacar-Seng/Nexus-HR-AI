@@ -7,12 +7,14 @@
 ![Vercel](https://img.shields.io/badge/Frontend-Vercel-black)
 ![Status](https://img.shields.io/badge/Project-Active-success)
 
-## 📺 Video Demo
-![Nexus HR Demo](https://img.shields.io/badge/Watch-Demo%20Video-red?style=for-the-badge&logo=youtube)
+
  
 🔗 Live Demo: [https://nexus-hr-ai.vercel.app/](https://nexus-hr-ai.vercel.app/)
 
 🔗 Backend API: Render (deployed)
+
+## 📺 Video Demo
+![Nexus HR Demo](https://img.shields.io/badge/Watch-Demo%20Video-red?style=for-the-badge&logo=youtube)
 
 Nexus HR is an end-to-end HR analytics platform that processes employee data, computes risk scores, and generates AI-powered executive insights for decision-making. The system is designed to automate KPI generation and handle unstructured CSV data pipelines efficiently.
 
