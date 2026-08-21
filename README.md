@@ -10,7 +10,7 @@
 
 ## 📺 Video Demo
 ![Nexus HR Demo](https://img.shields.io/badge/Watch-Demo%20Video-red?style=for-the-badge&logo=youtube) 
-
+https://youtu.be/vRkv6tcds5U
 🔗 Live Demo: [https://nexus-hr-ai.vercel.app/](https://nexus-hr-ai.vercel.app/)
 
 🔗 Backend API: Render (deployed)
