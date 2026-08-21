@@ -14,7 +14,7 @@
 ![Vercel](https://img.shields.io/badge/Frontend-Vercel-black)
 ![Status](https://img.shields.io/badge/Project-Active-success)
 
-
+ 
 
 Nexus HR is an end-to-end HR analytics platform that processes employee data, computes risk scores, and generates AI-powered executive insights for decision-making.
 
